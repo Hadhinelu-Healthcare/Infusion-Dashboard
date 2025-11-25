@@ -57,7 +57,7 @@
       padding: 20px;
       border-radius: var(--radius);
       box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-      margin-bottom: 22px;
+      margin-bottom: 24px;
     }
 
     .card h3 {
@@ -176,7 +176,7 @@
     <!-- GRAPH CARD -->
     <div class="card">
       <h3>Live Drip Rate Graph</h3>
-      <canvas id="rateChart" style="height:300px;"></canvas>
+      <canvas id="rateChart" style="height: 300px;"></canvas>
     </div>
 
   </div>
@@ -195,6 +195,8 @@
   var client = new Paho.MQTT.Client(host, port, path, clientId);
   var devices = {};
   var selectedDevice = "DEVICE_1";
+  var currentGraphDevice = "DEVICE_1";
+
 
   /* -------------------- LIVE GRAPH SETUP --------------------- */
 
@@ -208,30 +210,42 @@
     }]
   };
 
-  var ctx = document.getElementById('rateChart').getContext('2d');
+  var ctx = document.getElementById("rateChart").getContext("2d");
   var rateChart = new Chart(ctx, {
-    type: 'line',
+    type: "line",
     data: chartData,
     options: {
       responsive: true,
       tension: 0.4,
+      animation: false,
       scales: {
         x: { display: false }
       }
     }
   });
 
-  function updateGraph(rate) {
-    if (selectedDevice !== currentGraphDevice) return;
 
-    chartData.labels.push(Date.now());
-    chartData.data.datasets = undefined
+  /* ----------- FAST & SMOOTH GRAPH UPDATES (Optimized) ----------- */
+
+  let lastGraphUpdate = 0;
+
+  function updateGraph(rate) {
+    const now = Date.now();
+
+    chartData.labels.push(now);
     chartData.datasets[0].data.push(rate);
 
-    if (chartData.datasets[0].data.length > 30)
+    // Keep only last 30 points
+    if (chartData.labels.length > 30) {
+      chartData.labels.shift();
       chartData.datasets[0].data.shift();
+    }
 
-    rateChart.update();
+    // Redraw only every 500ms
+    if (now - lastGraphUpdate > 500) {
+      rateChart.update();
+      lastGraphUpdate = now;
+    }
   }
 
 
@@ -252,8 +266,9 @@
 
     updateDeviceRow(deviceId, field, payload);
 
-    if (field === "rate" && deviceId === selectedDevice)
+    if (field === "rate" && deviceId === selectedDevice) {
       updateGraph(parseFloat(payload));
+    }
   };
 
   function connect() {
@@ -263,7 +278,7 @@
         client.subscribe("infusion/+/drops");
         client.subscribe("infusion/+/status");
       },
-      onFailure: err => setTimeout(connect, 2000),
+      onFailure: (err) => setTimeout(connect, 2000),
       useSSL: true
     });
   }
@@ -303,7 +318,8 @@
           <td id="${device}-rate">-</td>
           <td id="${device}-drops">-</td>
           <td id="${device}-status">-</td>
-        </tr>`;
+        </tr>
+      `;
 
       document.getElementById("device-table-body")
         .insertAdjacentHTML("beforeend", row);
@@ -314,14 +330,14 @@
     ensureRow(device);
 
     if (field === "rate")
-      document.getElementById(`${device}-rate`).innerText = value;
+      document.getElementById(`${device}-rate`).textContent = value;
 
     else if (field === "drops")
-      document.getElementById(`${device}-drops`).innerText = value;
+      document.getElementById(`${device}-drops`).textContent = value;
 
     else if (field === "status") {
       var cell = document.getElementById(`${device}-status`);
-      cell.innerText = value;
+      cell.textContent = value;
       cell.className = "status-" + value;
     }
   }
