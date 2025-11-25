@@ -119,6 +119,12 @@
     .status-COMPLETED { color: purple; font-weight: bold; }
     .status-READY { color: orange; font-weight: bold; }
 
+    .controls {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
   </style>
 </head>
 
@@ -135,25 +141,37 @@
     <div class="card">
       <h3>Start Infusion</h3>
 
-      <label>Choose Device:</label><br>
-      <select id="deviceId">
-        <option value="DEVICE_1">DEVICE_1</option>
-        <option value="DEVICE_2">DEVICE_2</option>
-        <option value="DEVICE_3">DEVICE_3</option>
-        <option value="DEVICE_4">DEVICE_4</option>
-        <option value="DEVICE_5">DEVICE_5</option>
-      </select><br>
+      <div class="controls">
+        <div>
+          <label>Choose Device:</label><br>
+          <select id="deviceId">
+            <option value="DEVICE_1">DEVICE_1</option>
+            <option value="DEVICE_2">DEVICE_2</option>
+            <option value="DEVICE_3">DEVICE_3</option>
+            <option value="DEVICE_4">DEVICE_4</option>
+            <option value="DEVICE_5">DEVICE_5</option>
+          </select><br>
+        </div>
 
-      <label>Bottle Volume (mL):</label><br>
-      <input id="bottle" type="number" value="500"><br>
+        <div>
+          <label>Bottle Volume (mL):</label><br>
+          <input id="bottle" type="number" value="500"><br>
+        </div>
 
-      <label>Drop Factor (drops/mL):</label><br>
-      <input id="dropFactor" type="number" value="20"><br>
+        <div>
+          <label>Drop Factor (drops/mL):</label><br>
+          <input id="dropFactor" type="number" value="20"><br>
+        </div>
 
-      <label>Duration (minutes):</label><br>
-      <input id="duration" type="number" value="60"><br>
+        <div>
+          <label>Duration (minutes):</label><br>
+          <input id="duration" type="number" value="60"><br>
+        </div>
 
-      <button onclick="startInfusion()">START</button>
+        <div style="align-self:flex-end">
+          <button id="startBtn">START</button>
+        </div>
+      </div>
     </div>
 
     <!-- DEVICE TABLE -->
@@ -175,7 +193,7 @@
 
     <!-- GRAPH CARD -->
     <div class="card">
-      <h3>Live Drip Rate Graph</h3>
+      <h3>Live Drip Rate Graph — <span id="graph-device-label">DEVICE_1</span></h3>
       <canvas id="rateChart" style="height: 300px;"></canvas>
     </div>
 
@@ -197,6 +215,19 @@
   var selectedDevice = "DEVICE_1";
   var currentGraphDevice = "DEVICE_1";
 
+  // start button
+  document.addEventListener("DOMContentLoaded", function(){
+    document.getElementById("startBtn").addEventListener("click", startInfusion);
+    document.getElementById("deviceId").addEventListener("change", function(e){
+      selectedDevice = e.target.value;
+      currentGraphDevice = selectedDevice;
+      document.getElementById("graph-device-label").textContent = selectedDevice;
+      // clear chart data for new device
+      chartData.labels = [];
+      chartData.datasets[0].data = [];
+      rateChart.update();
+    });
+  });
 
   /* -------------------- LIVE GRAPH SETUP --------------------- */
 
@@ -210,49 +241,54 @@
     }]
   };
 
-  var ctx = document.getElementById("rateChart").getContext("2d");
+  var ctx = document.getElementById('rateChart').getContext('2d');
   var rateChart = new Chart(ctx, {
-    type: "line",
+    type: 'line',
     data: chartData,
     options: {
       responsive: true,
-      tension: 0.4,
+      tension: 0.35,
       animation: false,
       scales: {
-        x: { display: false }
+        x: { display: false },
+        y: {
+          beginAtZero: true,
+          suggestedMin: 0,
+          suggestedMax: 500,
+          max: 500,
+          ticks: {
+            stepSize: 50
+          }
+        }
       }
     }
   });
 
-
-  /* ----------- FAST & SMOOTH GRAPH UPDATES (Optimized) ----------- */
-
   let lastGraphUpdate = 0;
-
   function updateGraph(rate) {
     const now = Date.now();
 
+    // add data
     chartData.labels.push(now);
     chartData.datasets[0].data.push(rate);
 
-    // Keep only last 30 points
-    if (chartData.labels.length > 30) {
+    // limit length
+    if (chartData.labels.length > 60) {
       chartData.labels.shift();
       chartData.datasets[0].data.shift();
     }
 
-    // Redraw only every 500ms
-    if (now - lastGraphUpdate > 500) {
+    // throttle redraw (400ms)
+    if (now - lastGraphUpdate > 400) {
       rateChart.update();
       lastGraphUpdate = now;
     }
   }
 
-
   /* -------------------- MQTT EVENTS --------------------- */
 
   client.onConnectionLost = function (responseObject) {
-    console.error("MQTT lost:", responseObject.errorMessage);
+    console.error("MQTT lost:", responseObject ? responseObject.errorMessage : "unknown");
     setTimeout(connect, 2000);
   };
 
@@ -260,51 +296,70 @@
     var topic = message.destinationName;
     var payload = message.payloadString;
 
+    // topic example: infusion/DEVICE_1/rate
     var parts = topic.split("/");
+    if (parts.length < 3) return;
     var deviceId = parts[1];
     var field = parts[2];
 
-    updateDeviceRow(deviceId, field, payload);
+    // ensure row visible
+    ensureRow(deviceId);
 
-    if (field === "rate" && deviceId === selectedDevice) {
-      updateGraph(parseFloat(payload));
+    // fast updates
+    if (field === "rate") {
+      var r = parseFloat(payload);
+      if (!isNaN(r)) {
+        document.getElementById(deviceId + "-rate").textContent = r.toFixed(1);
+        // update graph only for current graph device
+        if (deviceId === currentGraphDevice) updateGraph(r);
+      }
+    } else if (field === "drops") {
+      document.getElementById(deviceId + "-drops").textContent = payload;
+    } else if (field === "status") {
+      var cell = document.getElementById(deviceId + "-status");
+      cell.textContent = payload;
+      cell.className = "status-" + payload;
     }
   };
 
   function connect() {
+    console.log("Connecting to MQTT...");
     client.connect({
       onSuccess: function () {
+        console.log("Connected to broker (WSS)");
         client.subscribe("infusion/+/rate");
         client.subscribe("infusion/+/drops");
         client.subscribe("infusion/+/status");
       },
-      onFailure: (err) => setTimeout(connect, 2000),
+      onFailure: function (err) {
+        console.error("MQTT connect failed:", err.errorMessage);
+        setTimeout(connect, 2000);
+      },
       useSSL: true
     });
   }
-
   connect();
-
 
   /* -------------------- SEND START COMMAND --------------------- */
 
   function startInfusion() {
     selectedDevice = document.getElementById("deviceId").value;
     currentGraphDevice = selectedDevice;
+    document.getElementById("graph-device-label").textContent = selectedDevice;
 
-    var payload =
-      "START:" +
-      document.getElementById("bottle").value + "," +
-      document.getElementById("dropFactor").value + "," +
-      document.getElementById("duration").value;
+    var bottle = document.getElementById("bottle").value || "500";
+    var df = document.getElementById("dropFactor").value || "20";
+    var dur = document.getElementById("duration").value || "60";
+
+    var topic = "infusion/" + selectedDevice + "/cmd";
+    var payload = "START:" + bottle + "," + df + "," + dur;
 
     var msg = new Paho.MQTT.Message(payload);
-    msg.destinationName = "infusion/" + selectedDevice + "/cmd";
+    msg.destinationName = topic;
     client.send(msg);
 
-    alert("Infusion started on " + selectedDevice);
+    alert("START sent to " + selectedDevice);
   }
-
 
   /* -------------------- DEVICE TABLE --------------------- */
 
@@ -320,25 +375,7 @@
           <td id="${device}-status">-</td>
         </tr>
       `;
-
-      document.getElementById("device-table-body")
-        .insertAdjacentHTML("beforeend", row);
-    }
-  }
-
-  function updateDeviceRow(device, field, value) {
-    ensureRow(device);
-
-    if (field === "rate")
-      document.getElementById(`${device}-rate`).textContent = value;
-
-    else if (field === "drops")
-      document.getElementById(`${device}-drops`).textContent = value;
-
-    else if (field === "status") {
-      var cell = document.getElementById(`${device}-status`);
-      cell.textContent = value;
-      cell.className = "status-" + value;
+      document.getElementById("device-table-body").insertAdjacentHTML("beforeend", row);
     }
   }
 
