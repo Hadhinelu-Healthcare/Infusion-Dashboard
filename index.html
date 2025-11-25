@@ -1,385 +1,513 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>DripStop Dashboard</title>
+<meta charset="UTF-8">
+<title>DripStop Dashboard</title>
 
-  <!-- Google Font -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- MQTT client -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+<!-- Paho MQTT -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <style>
-    :root {
-      --brand: #59A3BE;
-      --brand-dark: #3F7E94;
-      --bg: #F5F9FC;
-      --card-bg: #ffffff;
-      --text-dark: #1A1A1A;
-      --text-light: #555;
-      --radius: 14px;
-    }
+<style>
+:root {
+    --blue: #59A3BE;
+    --blue-dark: #3F7E94;
+    --bg: #F7FBFE;
+    --card: #FFFFFF;
+    --border: #E6EDF3;
+    --text: #1C1C1C;
+    --text-light: #6C7A89;
+    --radius: 14px;
+    --shadow: 0px 4px 14px rgba(0,0,0,0.05);
+}
 
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      margin: 0;
-      padding: 0;
-      color: var(--text-dark);
-    }
+/* RESET */
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
 
-    /* Header */
-    .header {
-      width: 100%;
-      background: var(--brand);
-      padding: 18px 28px;
-      color: white;
-      font-size: 28px;
-      font-weight: 700;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
+/* ===================== TOP NAV ====================== */
+.navbar {
+    width: 100%;
+    background: var(--blue);
+    color: white;
+    padding: 18px 32px;
+    font-size: 24px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.nav-links {
+    display: flex;
+    gap: 24px;
+    font-size: 16px;
+}
+.nav-links a {
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    opacity: 0.9;
+}
+.nav-links a:hover {
+    opacity:1;
+}
 
-    /* Main container */
-    .container {
-      max-width: 1100px;
-      margin: auto;
-      padding: 20px;
-    }
+/* ==================== PAGE LAYOUT ==================== */
+.container {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 20px;
+    padding: 20px;
+}
 
-    /* Card style */
-    .card {
-      background: var(--card-bg);
-      padding: 20px;
-      border-radius: var(--radius);
-      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-      margin-bottom: 24px;
-    }
+/* =================== SIDEBAR ==================== */
+.sidebar {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 18px;
+    height: fit-content;
+}
+.sidebar h3 {
+    margin-bottom: 10px;
+    color: var(--blue-dark);
+    font-size: 18px;
+}
+.device-item {
+    padding: 12px;
+    margin-bottom: 8px;
+    background: #F0F8FC;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+}
+.device-item:hover {
+    background: #D9EEF7;
+}
+.device-online { color: green; font-weight:600; }
+.device-offline { color: red; font-weight:600; }
 
-    .card h3 {
-      margin-top: 0;
-      margin-bottom: 12px;
-      font-size: 20px;
-      color: var(--brand-dark);
-    }
+/* ==================== DASHBOARD CONTENT ==================== */
+.main {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
 
-    label {
-      font-weight: 600;
-      color: var(--text-light);
-    }
+/* ==================== INFO CARDS ==================== */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+.stat-card {
+    background: var(--card);
+    padding: 20px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+.stat-title {
+    font-size: 14px;
+    color: var(--text-light);
+}
+.stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    margin-top: 6px;
+}
 
-    input, select {
-      padding: 8px;
-      width: 220px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      margin-bottom: 10px;
-    }
+/* ==================== GRAPH CARD ==================== */
+.graph-card {
+    background: var(--card);
+    padding: 20px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+.graph-card h3 {
+    margin-bottom: 20px;
+    color: var(--blue-dark);
+}
 
-    button {
-      padding: 10px 18px;
-      background: var(--brand);
-      color: white;
-      font-size: 15px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      margin-top: 10px;
-      transition: 0.2s;
-    }
+/* ==================== DEVICE TABLE ==================== */
+.table-card {
+    background: var(--card);
+    padding: 20px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+th {
+    background: var(--blue);
+    color: white;
+    padding: 12px;
+    border-radius: 4px;
+}
+td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+}
 
-    button:hover {
-      background: var(--brand-dark);
-    }
+/* STATUS COLORS */
+.status-ONLINE { color: green; font-weight:bold; }
+.status-INFUSING { color: blue; font-weight:bold; }
+.status-COMPLETED { color: purple; font-weight:bold; }
+.status-READY { color: orange; font-weight:bold; }
 
-    /* Table */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
+/* ==================== START-INFUSION MODAL ==================== */
+#modal-overlay {
+    position: fixed;
+    top:0; left:0; width:100%; height:100%;
+    background: rgba(0,0,0,0.4);
+    display:none;
+    align-items:center;
+    justify-content:center;
+}
+.modal {
+    background:white;
+    padding:24px;
+    width:350px;
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+}
+.modal h2 {
+    margin-bottom:12px;
+    color: var(--blue-dark);
+}
+.modal input, .modal select {
+    width:100%;
+    padding:10px;
+    margin:8px 0;
+    border:1px solid var(--border);
+    border-radius:8px;
+}
+.modal button {
+    width:100%;
+    padding:12px;
+    background:var(--blue);
+    border:none;
+    color:white;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:16px;
+}
 
-    th {
-      background: var(--brand);
-      color: white;
-      padding: 12px;
-    }
+/* ================= SETTINGS PANEL ================= */
+.settings {
+    background: var(--card);
+    padding: 20px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+</style>
 
-    td {
-      padding: 12px;
-      border-bottom: 1px solid #eee;
-    }
-
-    .status-ONLINE { color: green; font-weight: bold; }
-    .status-INFUSING { color: blue; font-weight: bold; }
-    .status-COMPLETED { color: purple; font-weight: bold; }
-    .status-READY { color: orange; font-weight: bold; }
-
-    .controls {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-  </style>
 </head>
-
 <body>
 
-  <!-- Header -->
-  <div class="header">
-    DripStop Cloud Dashboard
-  </div>
+<!-- ================= NAVBAR ================= -->
+<div class="navbar">
+    DripStop Dashboard
+    <div class="nav-links">
+        <a href="#">Dashboard</a>
+        <a href="#">Devices</a>
+        <a href="#" onclick="openSettings()">Settings</a>
+    </div>
+</div>
 
-  <div class="container">
-    
-    <!-- START INFUSION CARD -->
-    <div class="card">
-      <h3>Start Infusion</h3>
+<!-- ================= PAGE GRID ================= -->
+<div class="container">
 
-      <div class="controls">
-        <div>
-          <label>Choose Device:</label><br>
-          <select id="deviceId">
-            <option value="DEVICE_1">DEVICE_1</option>
-            <option value="DEVICE_2">DEVICE_2</option>
-            <option value="DEVICE_3">DEVICE_3</option>
-            <option value="DEVICE_4">DEVICE_4</option>
-            <option value="DEVICE_5">DEVICE_5</option>
-          </select><br>
-        </div>
-
-        <div>
-          <label>Bottle Volume (mL):</label><br>
-          <input id="bottle" type="number" value="500"><br>
-        </div>
-
-        <div>
-          <label>Drop Factor (drops/mL):</label><br>
-          <input id="dropFactor" type="number" value="20"><br>
-        </div>
-
-        <div>
-          <label>Duration (minutes):</label><br>
-          <input id="duration" type="number" value="60"><br>
-        </div>
-
-        <div style="align-self:flex-end">
-          <button id="startBtn">START</button>
-        </div>
-      </div>
+    <!-- ========== SIDEBAR ========== -->
+    <div class="sidebar">
+        <h3>Devices</h3>
+        <div id="device-list"></div>
+        <button onclick="openModal()" style="
+            margin-top:10px;width:100%;
+            background:var(--blue);color:white;
+            border:none;padding:10px;border-radius:8px;">
+            Start Infusion
+        </button>
     </div>
 
-    <!-- DEVICE TABLE -->
-    <div class="card">
-      <h3>Live Device Status</h3>
+    <!-- ========== MAIN DASHBOARD ========== -->
+    <div class="main">
 
-      <table>
-        <thead>
-          <tr>
-            <th>Device ID</th>
-            <th>Drip Rate (drops/min)</th>
-            <th>Total Drops</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="device-table-body"></tbody>
-      </table>
+        <!-- ========== STAT CARDS ========== -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-title">Current Drip Rate</div>
+                <div class="stat-value" id="stat-rate">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Total Drops</div>
+                <div class="stat-value" id="stat-drops">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Status</div>
+                <div class="stat-value" id="stat-status">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Graph Device</div>
+                <div class="stat-value" id="graph-device">DEVICE_1</div>
+            </div>
+        </div>
+
+        <!-- ========== GRAPH ========== -->
+        <div class="graph-card">
+            <h3>Live Drip Rate Graph</h3>
+            <canvas id="chart"></canvas>
+        </div>
+
+        <!-- ========== TABLE ========== -->
+        <div class="table-card">
+            <h3>Device Data Table</h3>
+            <table>
+                <thead>
+                  <tr>
+                    <th>Device</th>
+                    <th>Drip Rate</th>
+                    <th>Total Drops</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="table-body"></tbody>
+            </table>
+        </div>
+
     </div>
+</div>
 
-    <!-- GRAPH CARD -->
-    <div class="card">
-      <h3>Live Drip Rate Graph — <span id="graph-device-label">DEVICE_1</span></h3>
-      <canvas id="rateChart" style="height: 300px;"></canvas>
+<!-- ========== START-INFUSION MODAL ========== -->
+<div id="modal-overlay">
+    <div class="modal">
+        <h2>Start Infusion</h2>
+        <label>Device</label>
+        <select id="m-device">
+            <option>DEVICE_1</option>
+            <option>DEVICE_2</option>
+            <option>DEVICE_3</option>
+            <option>DEVICE_4</option>
+            <option>DEVICE_5</option>
+        </select>
+
+        <label>Bottle Volume (mL)</label>
+        <input id="m-bottle" type="number" value="500">
+
+        <label>Drop Factor</label>
+        <input id="m-factor" type="number" value="20">
+
+        <label>Duration (min)</label>
+        <input id="m-duration" type="number" value="60">
+
+        <button onclick="sendStart()">Start</button>
     </div>
+</div>
 
-  </div>
+<!-- SETTINGS -->
+<div class="settings" id="settings-panel" style="display:none; margin:20px;">
+    <h3>Settings</h3>
+    <p>More settings can be added here…</p>
+</div>
 
-
-<!-- ======================= JAVASCRIPT ======================= -->
-
+<!-- ================= JAVASCRIPT ================= -->
 <script>
-  /* -------------------- MQTT Secure Connection --------------------- */
+/* ======================================================
+   MQTT Connection Setup
+   ====================================================== */
+let host = "broker.hivemq.com";
+let port = 8884;
+let path = "/mqtt";
+let clientId = "DRIPSTOP_WEB_" + Math.random();
 
-  var host = "broker.hivemq.com";
-  var port = 8884;           
-  var path = "/mqtt";
-  var clientId = "DRIPSTOP_WEB_" + Date.now();
+let client = new Paho.MQTT.Client(host, port, path, clientId);
 
-  var client = new Paho.MQTT.Client(host, port, path, clientId);
-  var devices = {};
-  var selectedDevice = "DEVICE_1";
-  var currentGraphDevice = "DEVICE_1";
+let devices = {};   // stores device state
+let currentGraphDevice = "DEVICE_1";
 
-  // start button
-  document.addEventListener("DOMContentLoaded", function(){
-    document.getElementById("startBtn").addEventListener("click", startInfusion);
-    document.getElementById("deviceId").addEventListener("change", function(e){
-      selectedDevice = e.target.value;
-      currentGraphDevice = selectedDevice;
-      document.getElementById("graph-device-label").textContent = selectedDevice;
-      // clear chart data for new device
-      chartData.labels = [];
-      chartData.datasets[0].data = [];
-      rateChart.update();
-    });
-  });
+client.onConnectionLost = () => setTimeout(connect, 1000);
+client.onMessageArrived = onMessage;
 
-  /* -------------------- LIVE GRAPH SETUP --------------------- */
-
-  var chartData = {
-    labels: [],
-    datasets: [{
-      label: "Drip Rate (drops/min)",
-      borderColor: "#59A3BE",
-      backgroundColor: "rgba(89,163,190,0.2)",
-      data: []
-    }]
-  };
-
-  var ctx = document.getElementById('rateChart').getContext('2d');
-  var rateChart = new Chart(ctx, {
-    type: 'line',
-    data: chartData,
-    options: {
-      responsive: true,
-      tension: 0.35,
-      animation: false,
-      scales: {
-        x: { display: false },
-        y: {
-          beginAtZero: true,
-          suggestedMin: 0,
-          suggestedMax: 500,
-          max: 500,
-          ticks: {
-            stepSize: 50
-          }
-        }
-      }
-    }
-  });
-
-  let lastGraphUpdate = 0;
-  function updateGraph(rate) {
-    const now = Date.now();
-
-    // add data
-    chartData.labels.push(now);
-    chartData.datasets[0].data.push(rate);
-
-    // limit length
-    if (chartData.labels.length > 60) {
-      chartData.labels.shift();
-      chartData.datasets[0].data.shift();
-    }
-
-    // throttle redraw (400ms)
-    if (now - lastGraphUpdate > 400) {
-      rateChart.update();
-      lastGraphUpdate = now;
-    }
-  }
-
-  /* -------------------- MQTT EVENTS --------------------- */
-
-  client.onConnectionLost = function (responseObject) {
-    console.error("MQTT lost:", responseObject ? responseObject.errorMessage : "unknown");
-    setTimeout(connect, 2000);
-  };
-
-  client.onMessageArrived = function (message) {
-    var topic = message.destinationName;
-    var payload = message.payloadString;
-
-    // topic example: infusion/DEVICE_1/rate
-    var parts = topic.split("/");
-    if (parts.length < 3) return;
-    var deviceId = parts[1];
-    var field = parts[2];
-
-    // ensure row visible
-    ensureRow(deviceId);
-
-    // fast updates
-    if (field === "rate") {
-      var r = parseFloat(payload);
-      if (!isNaN(r)) {
-        document.getElementById(deviceId + "-rate").textContent = r.toFixed(1);
-        // update graph only for current graph device
-        if (deviceId === currentGraphDevice) updateGraph(r);
-      }
-    } else if (field === "drops") {
-      document.getElementById(deviceId + "-drops").textContent = payload;
-    } else if (field === "status") {
-      var cell = document.getElementById(deviceId + "-status");
-      cell.textContent = payload;
-      cell.className = "status-" + payload;
-    }
-  };
-
-  function connect() {
-    console.log("Connecting to MQTT...");
+function connect() {
     client.connect({
-      onSuccess: function () {
-        console.log("Connected to broker (WSS)");
-        client.subscribe("infusion/+/rate");
-        client.subscribe("infusion/+/drops");
-        client.subscribe("infusion/+/status");
-      },
-      onFailure: function (err) {
-        console.error("MQTT connect failed:", err.errorMessage);
-        setTimeout(connect, 2000);
-      },
-      useSSL: true
+        onSuccess: () => {
+            client.subscribe("infusion/+/rate");
+            client.subscribe("infusion/+/drops");
+            client.subscribe("infusion/+/status");
+        },
+        useSSL:true
     });
-  }
-  connect();
+}
+connect();
 
-  /* -------------------- SEND START COMMAND --------------------- */
+/* ======================================================
+   Device Sidebar + Table Updates
+   ====================================================== */
 
-  function startInfusion() {
-    selectedDevice = document.getElementById("deviceId").value;
-    currentGraphDevice = selectedDevice;
-    document.getElementById("graph-device-label").textContent = selectedDevice;
+function ensureDevice(id){
+    if (!devices[id]){
+        devices[id] = {rate:"-", drops:"-", status:"OFFLINE"};
+        updateSidebar();
+    }
+}
 
-    var bottle = document.getElementById("bottle").value || "500";
-    var df = document.getElementById("dropFactor").value || "20";
-    var dur = document.getElementById("duration").value || "60";
+function updateSidebar(){
+    let d = document.getElementById("device-list");
+    d.innerHTML = "";
+    
+    Object.keys(devices).forEach(id => {
+        let st = devices[id].status;
 
-    var topic = "infusion/" + selectedDevice + "/cmd";
-    var payload = "START:" + bottle + "," + df + "," + dur;
+        d.innerHTML += `
+        <div class="device-item" onclick="selectDevice('${id}')">
+            <span>${id}</span>
+            <span class="${st==='ONLINE'?'device-online':'device-offline'}">${st}</span>
+        </div>`;
+    });
+}
 
-    var msg = new Paho.MQTT.Message(payload);
-    msg.destinationName = topic;
+function updateTable(){
+    let t = document.getElementById("table-body");
+    t.innerHTML = "";
+
+    Object.keys(devices).forEach(id => {
+        let d = devices[id];
+        t.innerHTML += `
+        <tr>
+            <td>${id}</td>
+            <td>${d.rate}</td>
+            <td>${d.drops}</td>
+            <td class="status-${d.status}">${d.status}</td>
+        </tr>`;
+    });
+}
+
+function selectDevice(id){
+    currentGraphDevice = id;
+    document.getElementById("graph-device").textContent = id;
+
+    // reset chart
+    chart.data.labels = [];
+    chart.data.datasets[0].data = [];
+    chart.update();
+}
+
+/* ======================================================
+   Handle Incoming MQTT
+   ====================================================== */
+function onMessage(msg){
+    let topic = msg.destinationName;         // infusion/DEVICE_1/rate
+    let payload = msg.payloadString;
+
+    let parts = topic.split("/");
+    let id = parts[1];
+    let field = parts[2];
+
+    ensureDevice(id);
+
+    if (field === "rate"){
+        devices[id].rate = parseFloat(payload).toFixed(1);
+        if (id === currentGraphDevice) updateGraph(parseFloat(payload));
+        document.getElementById("stat-rate").textContent = devices[id].rate;
+    }
+    else if (field === "drops"){
+        devices[id].drops = payload;
+        document.getElementById("stat-drops").textContent = payload;
+    }
+    else if (field === "status"){
+        devices[id].status = payload;
+        document.getElementById("stat-status").textContent = payload;
+    }
+
+    updateSidebar();
+    updateTable();
+}
+
+/* ======================================================
+   Start Infusion (modal)
+   ====================================================== */
+function openModal(){ document.getElementById("modal-overlay").style.display = "flex"; }
+function closeModal(){ document.getElementById("modal-overlay").style.display = "none"; }
+
+function sendStart(){
+    let dev = document.getElementById("m-device").value;
+    let bottle = document.getElementById("m-bottle").value;
+    let factor = document.getElementById("m-factor").value;
+    let duration = document.getElementById("m-duration").value;
+
+    let msg = new Paho.MQTT.Message("START:"+bottle+","+factor+","+duration);
+    msg.destinationName = "infusion/" + dev + "/cmd";
     client.send(msg);
 
-    alert("START sent to " + selectedDevice);
-  }
+    closeModal();
+}
 
-  /* -------------------- DEVICE TABLE --------------------- */
+/* ======================================================
+   SETTINGS PANEL
+   ====================================================== */
+function openSettings(){
+    let s = document.getElementById("settings-panel");
+    s.style.display = s.style.display === "none" ? "block" : "none";
+}
 
-  function ensureRow(device) {
-    if (!devices[device]) {
-      devices[device] = { rate: "-", drops: "-", status: "-" };
-
-      var row = `
-        <tr id="row-${device}">
-          <td>${device}</td>
-          <td id="${device}-rate">-</td>
-          <td id="${device}-drops">-</td>
-          <td id="${device}-status">-</td>
-        </tr>
-      `;
-      document.getElementById("device-table-body").insertAdjacentHTML("beforeend", row);
+/* ======================================================
+   GRAPH (Chart.js)
+   ====================================================== */
+const chart = new Chart(document.getElementById("chart"), {
+    type:"line",
+    data:{
+        labels:[],
+        datasets:[{
+            label:"Drip Rate",
+            borderColor: "#59A3BE",
+            backgroundColor:"rgba(89,163,190,0.25)",
+            data:[],
+            tension:0.35,
+        }]
+    },
+    options:{
+        responsive:true,
+        animation:false,
+        scales:{
+            x:{ display:false },
+            y:{
+                beginAtZero:true,
+                max:500,
+                ticks:{ stepSize:50 }
+            }
+        }
     }
-  }
+});
+
+let lastUpdate = 0;
+function updateGraph(rate){
+    let now = Date.now();
+
+    chart.data.labels.push("");
+    chart.data.datasets[0].data.push(rate);
+
+    if(chart.data.labels.length>50){
+        chart.data.labels.shift();
+        chart.data.datasets[0].data.shift();
+    }
+
+    if(now-lastUpdate>400){
+        chart.update();
+        lastUpdate = now;
+    }
+}
 
 </script>
-
 </body>
 </html>
