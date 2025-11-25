@@ -2,231 +2,331 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Infusion Devices Dashboard</title>
+  <title>DripStop Dashboard</title>
 
-  <!-- MQTT client in browser -->
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <!-- MQTT client -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    h1 { margin-bottom: 10px; }
-    h3 { margin-top: 30px; }
+    :root {
+      --brand: #59A3BE;
+      --brand-dark: #3F7E94;
+      --bg: #F5F9FC;
+      --card-bg: #ffffff;
+      --text-dark: #1A1A1A;
+      --text-light: #555;
+      --radius: 14px;
+    }
 
-    table { border-collapse: collapse; width: 100%; max-width: 900px; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
-    th { background: #f0f0f0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      margin: 0;
+      padding: 0;
+      color: var(--text-dark);
+    }
 
-    label { display: inline-block; width: 200px; }
-    input { margin: 5px 0; }
-    button { margin-top: 10px; padding: 8px 14px; cursor: pointer; font-size: 16px; }
+    /* Header */
+    .header {
+      width: 100%;
+      background: var(--brand);
+      padding: 18px 28px;
+      color: white;
+      font-size: 28px;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    /* Main container */
+    .container {
+      max-width: 1100px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    /* Card style */
+    .card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: var(--radius);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+      margin-bottom: 22px;
+    }
+
+    .card h3 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 20px;
+      color: var(--brand-dark);
+    }
+
+    label {
+      font-weight: 600;
+      color: var(--text-light);
+    }
+
+    input, select {
+      padding: 8px;
+      width: 220px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      padding: 10px 18px;
+      background: var(--brand);
+      color: white;
+      font-size: 15px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background: var(--brand-dark);
+    }
+
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th {
+      background: var(--brand);
+      color: white;
+      padding: 12px;
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+    }
 
     .status-ONLINE { color: green; font-weight: bold; }
     .status-INFUSING { color: blue; font-weight: bold; }
     .status-COMPLETED { color: purple; font-weight: bold; }
     .status-READY { color: orange; font-weight: bold; }
+
   </style>
 </head>
 
 <body>
 
-  <h1>Infusion Devices Dashboard</h1>
-  <p><b>MQTT Broker:</b> broker.hivemq.com (Secure WebSocket: 8884)</p>
-  <p>This dashboard will automatically reconnect and detect devices when they come online.</p>
+  <!-- Header -->
+  <div class="header">
+    DripStop Cloud Dashboard
+  </div>
+
+  <div class="container">
+    
+    <!-- START INFUSION CARD -->
+    <div class="card">
+      <h3>Start Infusion</h3>
+
+      <label>Choose Device:</label><br>
+      <select id="deviceId">
+        <option value="DEVICE_1">DEVICE_1</option>
+        <option value="DEVICE_2">DEVICE_2</option>
+        <option value="DEVICE_3">DEVICE_3</option>
+        <option value="DEVICE_4">DEVICE_4</option>
+        <option value="DEVICE_5">DEVICE_5</option>
+      </select><br>
+
+      <label>Bottle Volume (mL):</label><br>
+      <input id="bottle" type="number" value="500"><br>
+
+      <label>Drop Factor (drops/mL):</label><br>
+      <input id="dropFactor" type="number" value="20"><br>
+
+      <label>Duration (minutes):</label><br>
+      <input id="duration" type="number" value="60"><br>
+
+      <button onclick="startInfusion()">START</button>
+    </div>
+
+    <!-- DEVICE TABLE -->
+    <div class="card">
+      <h3>Live Device Status</h3>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Device ID</th>
+            <th>Drip Rate (drops/min)</th>
+            <th>Total Drops</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="device-table-body"></tbody>
+      </table>
+    </div>
+
+    <!-- GRAPH CARD -->
+    <div class="card">
+      <h3>Live Drip Rate Graph</h3>
+      <canvas id="rateChart" style="height:300px;"></canvas>
+    </div>
+
+  </div>
 
 
-  <!-- =========================================================
-                      START INFUSION CONTROL
-       ========================================================= -->
+<!-- ======================= JAVASCRIPT ======================= -->
 
-  <h3>Start Infusion</h3>
+<script>
+  /* -------------------- MQTT Secure Connection --------------------- */
 
-  <label>Device ID:</label>
-  <input id="deviceId" placeholder="DEVICE_1"><br>
+  var host = "broker.hivemq.com";
+  var port = 8884;           
+  var path = "/mqtt";
+  var clientId = "DRIPSTOP_WEB_" + Date.now();
 
-  <label>Bottle Volume (mL):</label>
-  <input id="bottle" type="number" value="500"><br>
+  var client = new Paho.MQTT.Client(host, port, path, clientId);
+  var devices = {};
+  var selectedDevice = "DEVICE_1";
 
-  <label>Drop Factor (drops/mL):</label>
-  <input id="dropFactor" type="number" value="20"><br>
+  /* -------------------- LIVE GRAPH SETUP --------------------- */
 
-  <label>Duration (minutes):</label>
-  <input id="duration" type="number" value="60"><br>
+  var chartData = {
+    labels: [],
+    datasets: [{
+      label: "Drip Rate (drops/min)",
+      borderColor: "#59A3BE",
+      backgroundColor: "rgba(89,163,190,0.2)",
+      data: []
+    }]
+  };
 
-  <button onclick="startInfusion()">START</button>
-
-
-  <!-- =========================================================
-                         LIVE DEVICE TABLE
-       ========================================================= -->
-
-  <table>
-    <thead>
-      <tr>
-        <th>Device ID</th>
-        <th>Latest Rate (drops/min)</th>
-        <th>Total Drops</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody id="device-table-body"></tbody>
-  </table>
-
-
-
-  <!-- =========================================================
-                         JAVASCRIPT SECTION
-       ========================================================= -->
-
-  <script>
-
-    // ============================================================
-    //                    MQTT SECURE (WSS) SETUP
-    // ============================================================
-
-    var host = "broker.hivemq.com";
-    var port = 8884;                     // Secure WebSocket port
-    var path = "/mqtt";                   // Keep this exact path
-    var clientId = "WEB_DASH_" + Date.now();
-
-    // Create MQTT Client for WebSockets (secure WSS)
-    var client = new Paho.MQTT.Client(host, port, path, clientId);
-
-    // Holds data for all devices
-    var devices = {};
-
-
-
-    // ============================================================
-    //               MQTT EVENT: CONNECTION LOST
-    // ============================================================
-
-    client.onConnectionLost = function (responseObject) {
-      console.error("MQTT WebSocket lost:", responseObject.errorMessage);
-      setTimeout(connect, 2000);        // Auto-reconnect
-    };
-
-
-
-    // ============================================================
-    //            MQTT EVENT: MESSAGE ARRIVED
-    // ============================================================
-
-    client.onMessageArrived = function (message) {
-      var topic = message.destinationName;
-      var payload = message.payloadString;
-
-      console.log("MQTT message:", topic, payload);
-
-      var parts = topic.split("/");   // infusion / DEVICE_1 / rate
-      if (parts.length < 3) return;
-
-      var deviceId = parts[1];
-      var field = parts[2];
-
-      updateDeviceRow(deviceId, field, payload);
-    };
-
-
-
-    // ============================================================
-    //               CONNECT TO MQTT (SECURE)
-    // ============================================================
-
-    function connect() {
-      console.log("Connecting to secure MQTT (wss://)...");
-
-      client.connect({
-        onSuccess: function () {
-          console.log("MQTT connected ✔ via wss://");
-          client.subscribe("infusion/+/rate");
-          client.subscribe("infusion/+/drops");
-          client.subscribe("infusion/+/status");
-        },
-
-        onFailure: function (err) {
-          console.error("MQTT connect failed:", err.errorMessage);
-          setTimeout(connect, 2000);      // Retry on fail
-        },
-
-        useSSL: true                      // IMPORTANT for GitHub Pages (HTTPS)
-      });
-    }
-
-    // Start connection attempt
-    connect();
-
-
-
-    // ============================================================
-    //                  SEND START COMMAND
-    // ============================================================
-
-    function startInfusion() {
-      var dev = document.getElementById("deviceId").value.trim();
-      var bottle = document.getElementById("bottle").value.trim();
-      var df = document.getElementById("dropFactor").value.trim();
-      var dur = document.getElementById("duration").value.trim();
-
-      if (!dev) {
-        alert("Please enter Device ID like DEVICE_1");
-        return;
-      }
-
-      var topic = "infusion/" + dev + "/cmd";
-      var payload = "START:" + bottle + "," + df + "," + dur;
-
-      var message = new Paho.MQTT.Message(payload);
-      message.destinationName = topic;
-      client.send(message);
-
-      alert("START command sent to " + dev);
-    }
-
-
-
-    // ============================================================
-    //                     DEVICE TABLE HANDLING
-    // ============================================================
-
-    function ensureRow(deviceId) {
-      if (!devices[deviceId]) {
-        devices[deviceId] = { rate: "-", drops: "-", status: "-" };
-
-        var tbody = document.getElementById("device-table-body");
-        var row = document.createElement("tr");
-        row.id = "row-" + deviceId;
-
-        row.innerHTML = `
-          <td>${deviceId}</td>
-          <td id="${deviceId}-rate">-</td>
-          <td id="${deviceId}-drops">-</td>
-          <td id="${deviceId}-status">-</td>
-        `;
-
-        tbody.appendChild(row);
+  var ctx = document.getElementById('rateChart').getContext('2d');
+  var rateChart = new Chart(ctx, {
+    type: 'line',
+    data: chartData,
+    options: {
+      responsive: true,
+      tension: 0.4,
+      scales: {
+        x: { display: false }
       }
     }
+  });
 
-    function updateDeviceRow(deviceId, field, value) {
-      ensureRow(deviceId);
+  function updateGraph(rate) {
+    if (selectedDevice !== currentGraphDevice) return;
 
-      devices[deviceId][field] = value;
+    chartData.labels.push(Date.now());
+    chartData.data.datasets = undefined
+    chartData.datasets[0].data.push(rate);
 
-      if (field === "rate") {
-        document.getElementById(deviceId + "-rate").innerText = value;
-      } 
-      else if (field === "drops") {
-        document.getElementById(deviceId + "-drops").innerText = value;
-      } 
-      else if (field === "status") {
-        var cell = document.getElementById(deviceId + "-status");
-        cell.innerText = value;
-        cell.className = "status-" + value;
-      }
+    if (chartData.datasets[0].data.length > 30)
+      chartData.datasets[0].data.shift();
+
+    rateChart.update();
+  }
+
+
+  /* -------------------- MQTT EVENTS --------------------- */
+
+  client.onConnectionLost = function (responseObject) {
+    console.error("MQTT lost:", responseObject.errorMessage);
+    setTimeout(connect, 2000);
+  };
+
+  client.onMessageArrived = function (message) {
+    var topic = message.destinationName;
+    var payload = message.payloadString;
+
+    var parts = topic.split("/");
+    var deviceId = parts[1];
+    var field = parts[2];
+
+    updateDeviceRow(deviceId, field, payload);
+
+    if (field === "rate" && deviceId === selectedDevice)
+      updateGraph(parseFloat(payload));
+  };
+
+  function connect() {
+    client.connect({
+      onSuccess: function () {
+        client.subscribe("infusion/+/rate");
+        client.subscribe("infusion/+/drops");
+        client.subscribe("infusion/+/status");
+      },
+      onFailure: err => setTimeout(connect, 2000),
+      useSSL: true
+    });
+  }
+
+  connect();
+
+
+  /* -------------------- SEND START COMMAND --------------------- */
+
+  function startInfusion() {
+    selectedDevice = document.getElementById("deviceId").value;
+    currentGraphDevice = selectedDevice;
+
+    var payload =
+      "START:" +
+      document.getElementById("bottle").value + "," +
+      document.getElementById("dropFactor").value + "," +
+      document.getElementById("duration").value;
+
+    var msg = new Paho.MQTT.Message(payload);
+    msg.destinationName = "infusion/" + selectedDevice + "/cmd";
+    client.send(msg);
+
+    alert("Infusion started on " + selectedDevice);
+  }
+
+
+  /* -------------------- DEVICE TABLE --------------------- */
+
+  function ensureRow(device) {
+    if (!devices[device]) {
+      devices[device] = { rate: "-", drops: "-", status: "-" };
+
+      var row = `
+        <tr id="row-${device}">
+          <td>${device}</td>
+          <td id="${device}-rate">-</td>
+          <td id="${device}-drops">-</td>
+          <td id="${device}-status">-</td>
+        </tr>`;
+
+      document.getElementById("device-table-body")
+        .insertAdjacentHTML("beforeend", row);
     }
+  }
 
-  </script>
+  function updateDeviceRow(device, field, value) {
+    ensureRow(device);
+
+    if (field === "rate")
+      document.getElementById(`${device}-rate`).innerText = value;
+
+    else if (field === "drops")
+      document.getElementById(`${device}-drops`).innerText = value;
+
+    else if (field === "status") {
+      var cell = document.getElementById(`${device}-status`);
+      cell.innerText = value;
+      cell.className = "status-" + value;
+    }
+  }
+
+</script>
 
 </body>
 </html>
-
