@@ -1,194 +1,379 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>DripStop Dashboard</title>
 
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Paho MQTT -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 :root {
-  --brand:#59A3BE;
+    --blue: #59A3BE;
+    --blue-dark: #3F7E94;
+    --bg: #F7FBFE;
+    --card: #FFFFFF;
+    --border: #E6EDF3;
+    --text: #1C1C1C;
+    --text-light: #6C7A89;
+    --radius: 14px;
+    --shadow: 0px 4px 14px rgba(0,0,0,0.05);
 }
 
+/* RESET */
+* { margin:0; padding:0; box-sizing:border-box; }
 body {
-  font-family: Inter, sans-serif;
-  background:#F5F9FC;
-  margin:0;
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
 }
 
-.header {
-  background:var(--brand);
-  color:white;
-  padding:18px;
-  font-size:26px;
-  font-weight:bold;
+/* ===================== TOP NAV ====================== */
+.navbar {
+    width: 100%;
+    background: var(--blue);
+    color: white;
+    padding: 18px 32px;
+    font-size: 24px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.nav-links {
+    display: flex;
+    gap: 24px;
+    font-size: 16px;
+}
+.nav-links a {
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    opacity: 0.9;
+}
+.nav-links a:hover {
+    opacity:1;
 }
 
+/* ==================== PAGE LAYOUT ==================== */
 .container {
-  padding:20px;
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 20px;
+    padding: 20px;
 }
 
-.card {
-  background:white;
-  padding:20px;
-  border-radius:14px;
-  box-shadow:0 3px 8px rgba(0,0,0,0.08);
-  margin-bottom:20px;
+/* =================== SIDEBAR ==================== */
+.sidebar {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 18px;
+    height: fit-content;
 }
-
-table {
-  width:100%;
-  border-collapse:collapse;
+.sidebar h3 {
+    margin-bottom: 10px;
+    color: var(--blue-dark);
+    font-size: 18px;
 }
-
-th {
-  background:var(--brand);
-  color:white;
-  padding:12px;
+.device-item {
+    padding: 12px;
+    margin-bottom: 8px;
+    background: #F0F8FC;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items:center;
 }
-
-td {
-  padding:12px;
-  border-bottom:1px solid #eee;
+.device-item:hover {
+    background: #D9EEF7;
 }
+.device-online { color: green; font-weight:600; }
+.device-offline { color: red; font-weight:600; }
 
+/* ✅ BATTERY ICON ✅ */
 .battery {
-  width:40px;
-  height:18px;
-  border:2px solid black;
-  border-radius:4px;
-  display:flex;
-  gap:2px;
-  padding:2px;
-  position:relative;
+    width: 22px;
+    height: 12px;
+    border: 2px solid #000;
+    border-radius: 3px;
+    display: flex;
+    gap: 1px;
+    padding: 1px;
+    position: relative;
+    margin-top: 4px;
 }
-
 .battery::after {
-  content:"";
-  width:5px;
-  height:8px;
-  background:black;
-  position:absolute;
-  right:-7px;
-  top:4px;
+    content:"";
+    width:4px;
+    height:6px;
+    background:black;
+    position:absolute;
+    right:-6px;
+    top:3px;
+    border-radius:2px;
 }
-
-.blip {
-  flex:1;
-  background:#ddd;
-  border-radius:2px;
-}
-
-.blip-fill { background:#59A3BE; }
-.blip-low  { background:red; }
+.blip { flex:1; background:#DDD; }
+.blip-blue { background:#59A3BE; }
+.blip-red { background:red; }
 
 .charging {
-  position:absolute;
-  inset:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:14px;
-  color:gold;
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:gold;
+    font-size:10px;
+}
+
+/* ==================== DASHBOARD CONTENT ==================== */
+.main {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* ==================== INFO CARDS ==================== */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+.stat-card {
+    background: var(--card);
+    padding: 20px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+.stat-title {
+    font-size: 14px;
+    color: var(--text-light);
+}
+.stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    margin-top: 6px;
+}
+
+/* ==================== GRAPH CARD ==================== */
+.graph-card {
+    background: var(--card);
+    padding: 20px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+.graph-card h3 {
+    margin-bottom: 20px;
+    color: var(--blue-dark);
+}
+
+/* ==================== DEVICE TABLE ==================== */
+.table-card {
+    background: var(--card);
+    padding: 20px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+th {
+    background: var(--blue);
+    color: white;
+    padding: 12px;
+    border-radius: 4px;
+}
+td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+/* STATUS COLORS */
+.status-ONLINE { color: green; font-weight:bold; }
+.status-INFUSING { color: blue; font-weight:bold; }
+.status-COMPLETED { color: purple; font-weight:bold; }
+.status-READY { color: orange; font-weight:bold; }
+
+/* ==================== START-INFUSION MODAL ==================== */
+#modal-overlay {
+    position: fixed;
+    top:0; left:0; width:100%; height:100%;
+    background: rgba(0,0,0,0.4);
+    display:none;
+    align-items:center;
+    justify-content:center;
+}
+.modal {
+    background:white;
+    padding:24px;
+    width:350px;
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+}
+.modal h2 {
+    margin-bottom:12px;
+    color: var(--blue-dark);
+}
+.modal input, .modal select {
+    width:100%;
+    padding:10px;
+    margin:8px 0;
+    border:1px solid var(--border);
+    border-radius:8px;
+}
+.modal button {
+    width:100%;
+    padding:12px;
+    background:var(--blue);
+    border:none;
+    color:white;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:16px;
+}
+
+/* ================= SETTINGS PANEL ================= */
+.settings {
+    background: var(--card);
+    padding: 20px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
 }
 </style>
-</head>
 
+</head>
 <body>
 
-<div class="header">DripStop Cloud Dashboard</div>
+<div class="navbar">
+    DripStop Dashboard
+    <div class="nav-links">
+        <a href="#">Dashboard</a>
+        <a href="#">Devices</a>
+        <a href="#" onclick="openSettings()">Settings</a>
+    </div>
+</div>
 
 <div class="container">
 
-<div class="card">
-<table>
-<thead>
-<tr>
-<th>Device</th>
-<th>Rate</th>
-<th>Drops</th>
-<th>Status</th>
-<th>Battery</th>
-</tr>
-</thead>
-<tbody id="table"></tbody>
-</table>
-</div>
+    <div class="sidebar">
+        <h3>Devices</h3>
+        <div id="device-list"></div>
+        <button onclick="openModal()" style="margin-top:10px;width:100%;
+            background:var(--blue);color:white;border:none;padding:10px;border-radius:8px;">
+            Start Infusion
+        </button>
+    </div>
 
+    <div class="main">
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-title">Current Drip Rate</div><div class="stat-value" id="stat-rate">0</div></div>
+            <div class="stat-card"><div class="stat-title">Total Drops</div><div class="stat-value" id="stat-drops">0</div></div>
+            <div class="stat-card"><div class="stat-title">Status</div><div class="stat-value" id="stat-status">-</div></div>
+            <div class="stat-card"><div class="stat-title">Graph Device</div><div class="stat-value" id="graph-device">DEVICE_1</div></div>
+        </div>
+
+        <div class="graph-card">
+            <h3>Live Drip Rate Graph</h3>
+            <canvas id="chart"></canvas>
+        </div>
+
+        <div class="table-card">
+            <h3>Device Data Table</h3>
+            <table>
+                <thead>
+                <tr><th>Device</th><th>Drip Rate</th><th>Total Drops</th><th>Status</th></tr>
+                </thead>
+                <tbody id="table-body"></tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <script>
 let devices = {};
-const client = new Paho.MQTT.Client("broker.hivemq.com",8884,"/mqtt","WEB_"+Math.random());
+let client = new Paho.MQTT.Client("broker.hivemq.com",8884,"/mqtt","WEB_"+Math.random());
 
 client.onMessageArrived = onMessage;
 client.connect({useSSL:true,onSuccess:()=>{
-  client.subscribe("infusion/+/rate");
-  client.subscribe("infusion/+/drops");
-  client.subscribe("infusion/+/status");
-  client.subscribe("infusion/+/battery");
-  client.subscribe("infusion/+/charging");
+    client.subscribe("infusion/+/rate");
+    client.subscribe("infusion/+/drops");
+    client.subscribe("infusion/+/status");
+    client.subscribe("infusion/+/battery");
+    client.subscribe("infusion/+/charging");
 }});
 
-function onMessage(msg){
-  let parts = msg.destinationName.split("/");
-  let dev = parts[1];
-  let field = parts[2];
-  let val = msg.payloadString;
-
-  if(!devices[dev]){
-    devices[dev] = {battery:0, charging:0};
-    document.getElementById("table").innerHTML += `
-      <tr id="row-${dev}">
-        <td>${dev}</td>
-        <td id="${dev}-rate">-</td>
-        <td id="${dev}-drops">-</td>
-        <td id="${dev}-status">-</td>
-        <td>
-          <div class="battery" id="bat-${dev}">
-            <div class="blip"></div>
-            <div class="blip"></div>
-            <div class="blip"></div>
-          </div>
-        </td>
-      </tr>`;
-  }
-
-  if(field==="rate") document.getElementById(dev+"-rate").innerText = val;
-  if(field==="drops") document.getElementById(dev+"-drops").innerText = val;
-  if(field==="status") document.getElementById(dev+"-status").innerText = val;
-  if(field==="battery") devices[dev].battery = parseFloat(val);
-  if(field==="charging") devices[dev].charging = val;
-
-  updateBattery(dev);
+function ensureDevice(id){
+    if(!devices[id]){
+        devices[id] = {rate:"-",drops:"-",status:"OFFLINE",battery:0,charging:0};
+        updateSidebar();
+    }
 }
 
-function updateBattery(dev){
-  const v = devices[dev].battery;
-  const charging = devices[dev].charging === "1";
-  const blips = document.querySelectorAll("#bat-"+dev+" .blip");
+function updateSidebar(){
+    let d = document.getElementById("device-list");
+    d.innerHTML = "";
 
-  blips.forEach(b=>b.className="blip");
-  document.querySelectorAll("#bat-"+dev+" .charging").forEach(e=>e.remove());
+    Object.keys(devices).forEach(id=>{
+        let st = devices[id].status;
+        d.innerHTML += `
+        <div class="device-item">
+            <div>
+                <div>${id}</div>
+                <div class="battery" id="bat-${id}">
+                    <div class="blip"></div>
+                    <div class="blip"></div>
+                    <div class="blip"></div>
+                </div>
+            </div>
+            <span class="${st==='ONLINE'?'device-online':'device-offline'}">${st}</span>
+        </div>`;
+        renderBattery(id);
+    });
+}
 
-  if(charging){
-    document.getElementById("bat-"+dev).innerHTML += `<div class="charging">⚡</div>`;
-    return;
-  }
+function onMessage(msg){
+    let p = msg.destinationName.split("/");
+    let id = p[1];
+    let field = p[2];
+    let val = msg.payloadString;
+    ensureDevice(id);
 
-  if(v >= 3.0){
-    blips[0].classList.add("blip-fill");
-    blips[1].classList.add("blip-fill");
-  }
-  else if(v >= 2.5){
-    blips[0].classList.add("blip-low");
-  }
-  else{
-    blips[0].classList.add("blip-low");
-  }
+    if(field==="rate") devices[id].rate = val;
+    if(field==="drops") devices[id].drops = val;
+    if(field==="status") devices[id].status = val;
+    if(field==="battery") devices[id].battery = parseFloat(val);
+    if(field==="charging") devices[id].charging = val;
+
+    updateSidebar();
+}
+
+function renderBattery(id){
+    let v = devices[id].battery || 0;
+    let ch = devices[id].charging || "0";
+    let blips = document.querySelectorAll(`#bat-${id} .blip`);
+
+    blips.forEach(b=>b.className="blip");
+    document.querySelectorAll(`#bat-${id} .charging`).forEach(e=>e.remove());
+
+    if(ch==="1"){
+        document.getElementById(`bat-${id}`).innerHTML += `<div class="charging">⚡</div>`;
+        return;
+    }
+
+    if(v>=3.0){ blips[0].classList.add("blip-blue"); blips[1].classList.add("blip-blue"); }
+    else if(v>=2.5){ blips[0].classList.add("blip-red"); }
+    else { blips[0].classList.add("blip-red"); }
 }
 </script>
+
 </body>
 </html>
