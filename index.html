@@ -2,85 +2,122 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>DripStop ICU Dashboard</title>
+<title>DripStop Dashboard</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-:root { --blue:#59A3BE; }
-
-body {
-  margin:0;
-  font-family: Inter, Arial;
-  background:#F4FAFE;
+:root {
+  --brand:#59A3BE;
 }
 
-.nav {
-  background:var(--blue);
+body {
+  font-family: Inter, sans-serif;
+  background:#F5F9FC;
+  margin:0;
+}
+
+.header {
+  background:var(--brand);
   color:white;
-  font-size:22px;
-  padding:16px;
+  padding:18px;
+  font-size:26px;
   font-weight:bold;
 }
 
-.grid {
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
-  gap:18px;
+.container {
   padding:20px;
 }
 
-.device-card {
+.card {
   background:white;
-  padding:18px;
-  border-radius:16px;
-  box-shadow:0 4px 14px rgba(0,0,0,0.08);
+  padding:20px;
+  border-radius:14px;
+  box-shadow:0 3px 8px rgba(0,0,0,0.08);
+  margin-bottom:20px;
+}
+
+table {
+  width:100%;
+  border-collapse:collapse;
+}
+
+th {
+  background:var(--brand);
+  color:white;
+  padding:12px;
+}
+
+td {
+  padding:12px;
+  border-bottom:1px solid #eee;
 }
 
 .battery {
-  width:50px;
-  height:22px;
+  width:40px;
+  height:18px;
   border:2px solid black;
-  border-radius:5px;
+  border-radius:4px;
   display:flex;
-  gap:3px;
+  gap:2px;
   padding:2px;
   position:relative;
 }
 
 .battery::after {
   content:"";
-  width:6px;
-  height:10px;
+  width:5px;
+  height:8px;
   background:black;
   position:absolute;
-  right:-8px;
-  top:5px;
-  border-radius:3px;
+  right:-7px;
+  top:4px;
 }
 
-.battery-bar {
+.blip {
   flex:1;
-  background:#DDD;
-  border-radius:3px;
+  background:#ddd;
+  border-radius:2px;
 }
 
-.battery-fill { background:var(--blue); }
-.battery-low { background:red; }
+.blip-fill { background:#59A3BE; }
+.blip-low  { background:red; }
 
 .charging {
   position:absolute;
-  right:-28px;
-  top:-6px;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:14px;
   color:gold;
-  font-size:18px;
 }
 </style>
 </head>
 
 <body>
-<div class="nav">DripStop ICU Battery Dashboard</div>
-<div class="grid" id="grid"></div>
+
+<div class="header">DripStop Cloud Dashboard</div>
+
+<div class="container">
+
+<div class="card">
+<table>
+<thead>
+<tr>
+<th>Device</th>
+<th>Rate</th>
+<th>Drops</th>
+<th>Status</th>
+<th>Battery</th>
+</tr>
+</thead>
+<tbody id="table"></tbody>
+</table>
+</div>
+
+</div>
 
 <script>
 let devices = {};
@@ -88,8 +125,10 @@ const client = new Paho.MQTT.Client("broker.hivemq.com",8884,"/mqtt","WEB_"+Math
 
 client.onMessageArrived = onMessage;
 client.connect({useSSL:true,onSuccess:()=>{
-  client.subscribe("infusion/+/batteryVoltage");
-  client.subscribe("infusion/+/batteryPercent");
+  client.subscribe("infusion/+/rate");
+  client.subscribe("infusion/+/drops");
+  client.subscribe("infusion/+/status");
+  client.subscribe("infusion/+/battery");
   client.subscribe("infusion/+/charging");
 }});
 
@@ -99,48 +138,55 @@ function onMessage(msg){
   let field = parts[2];
   let val = msg.payloadString;
 
-  if(!devices[dev]) createDevice(dev);
-  devices[dev][field] = val;
+  if(!devices[dev]){
+    devices[dev] = {battery:0, charging:0};
+    document.getElementById("table").innerHTML += `
+      <tr id="row-${dev}">
+        <td>${dev}</td>
+        <td id="${dev}-rate">-</td>
+        <td id="${dev}-drops">-</td>
+        <td id="${dev}-status">-</td>
+        <td>
+          <div class="battery" id="bat-${dev}">
+            <div class="blip"></div>
+            <div class="blip"></div>
+            <div class="blip"></div>
+          </div>
+        </td>
+      </tr>`;
+  }
+
+  if(field==="rate") document.getElementById(dev+"-rate").innerText = val;
+  if(field==="drops") document.getElementById(dev+"-drops").innerText = val;
+  if(field==="status") document.getElementById(dev+"-status").innerText = val;
+  if(field==="battery") devices[dev].battery = parseFloat(val);
+  if(field==="charging") devices[dev].charging = val;
+
   updateBattery(dev);
 }
 
-function createDevice(dev){
-  devices[dev] = {};
-  document.getElementById("grid").innerHTML += `
-    <div class="device-card" id="card-${dev}">
-      <h3>${dev}</h3>
-      <div class="battery" id="bat-${dev}">
-        <div class="battery-bar"></div>
-        <div class="battery-bar"></div>
-        <div class="battery-bar"></div>
-      </div>
-      <div id="volt-${dev}">-- V</div>
-    </div>`;
-}
-
 function updateBattery(dev){
-  let v = parseFloat(devices[dev].batteryVoltage || 0);
-  let p = parseInt(devices[dev].batteryPercent || 0);
-  let c = devices[dev].charging || "0";
+  const v = devices[dev].battery;
+  const charging = devices[dev].charging === "1";
+  const blips = document.querySelectorAll("#bat-"+dev+" .blip");
 
-  document.getElementById("volt-"+dev).innerText = v.toFixed(2)+" V";
+  blips.forEach(b=>b.className="blip");
+  document.querySelectorAll("#bat-"+dev+" .charging").forEach(e=>e.remove());
 
-  let bars = document.querySelectorAll("#bat-"+dev+" .battery-bar");
-  bars.forEach(b=>b.className="battery-bar");
-
-  if(p > 20) bars[0].classList.add("battery-fill");
-  if(p > 50) bars[1].classList.add("battery-fill");
-  if(p > 80) bars[2].classList.add("battery-fill");
-
-  if(p < 20){
-    bars.forEach(b=>b.classList.add("battery-low"));
+  if(charging){
+    document.getElementById("bat-"+dev).innerHTML += `<div class="charging">⚡</div>`;
+    return;
   }
 
-  if(c=="1"){
-    if(!document.getElementById("chg-"+dev))
-      document.getElementById("bat-"+dev)
-      .insertAdjacentHTML("beforeend",
-        `<span class="charging" id="chg-${dev}">⚡</span>`);
+  if(v >= 3.0){
+    blips[0].classList.add("blip-fill");
+    blips[1].classList.add("blip-fill");
+  }
+  else if(v >= 2.5){
+    blips[0].classList.add("blip-low");
+  }
+  else{
+    blips[0].classList.add("blip-low");
   }
 }
 </script>
