@@ -98,9 +98,9 @@ body {
 .device-online { color: green; font-weight:600; }
 .device-offline { color: red; font-weight:600; }
 
-/* ✅ BATTERY ICON ✅ */
+/* BATTERY ICON IN SIDEBAR */
 .battery {
-    width: 22px;
+    width: 24px;
     height: 12px;
     border: 2px solid #000;
     border-radius: 3px;
@@ -120,9 +120,13 @@ body {
     top:3px;
     border-radius:2px;
 }
-.blip { flex:1; background:#DDD; }
+.blip {
+    flex:1;
+    background:#DDD;
+    border-radius:2px;
+}
 .blip-blue { background:#59A3BE; }
-.blip-red { background:red; }
+.blip-red  { background:red; }
 
 .charging {
     position:absolute;
@@ -132,6 +136,16 @@ body {
     justify-content:center;
     color:gold;
     font-size:10px;
+}
+
+/* blinking effect for <2.7V */
+@keyframes blink {
+    0% { opacity:1; }
+    50% { opacity:0.2; }
+    100% { opacity:1; }
+}
+.blink {
+    animation: blink 1s infinite;
 }
 
 /* ==================== DASHBOARD CONTENT ==================== */
@@ -253,6 +267,7 @@ td {
 </head>
 <body>
 
+<!-- ================= NAVBAR ================= -->
 <div class="navbar">
     DripStop Dashboard
     <div class="nav-links">
@@ -262,70 +277,159 @@ td {
     </div>
 </div>
 
+<!-- ================= PAGE GRID ================= -->
 <div class="container">
 
+    <!-- ========== SIDEBAR ========== -->
     <div class="sidebar">
         <h3>Devices</h3>
         <div id="device-list"></div>
-        <button onclick="openModal()" style="margin-top:10px;width:100%;
-            background:var(--blue);color:white;border:none;padding:10px;border-radius:8px;">
+        <button onclick="openModal()" style="
+            margin-top:10px;width:100%;
+            background:var(--blue);color:white;
+            border:none;padding:10px;border-radius:8px;">
             Start Infusion
         </button>
     </div>
 
+    <!-- ========== MAIN DASHBOARD ========== -->
     <div class="main">
+
+        <!-- ========== STAT CARDS ========== -->
         <div class="stats-grid">
-            <div class="stat-card"><div class="stat-title">Current Drip Rate</div><div class="stat-value" id="stat-rate">0</div></div>
-            <div class="stat-card"><div class="stat-title">Total Drops</div><div class="stat-value" id="stat-drops">0</div></div>
-            <div class="stat-card"><div class="stat-title">Status</div><div class="stat-value" id="stat-status">-</div></div>
-            <div class="stat-card"><div class="stat-title">Graph Device</div><div class="stat-value" id="graph-device">DEVICE_1</div></div>
+            <div class="stat-card">
+                <div class="stat-title">Current Drip Rate</div>
+                <div class="stat-value" id="stat-rate">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Total Drops</div>
+                <div class="stat-value" id="stat-drops">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Status</div>
+                <div class="stat-value" id="stat-status">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Graph Device</div>
+                <div class="stat-value" id="graph-device">DEVICE_1</div>
+            </div>
         </div>
 
+        <!-- ========== GRAPH ========== -->
         <div class="graph-card">
             <h3>Live Drip Rate Graph</h3>
             <canvas id="chart"></canvas>
         </div>
 
+        <!-- ========== TABLE ========== -->
         <div class="table-card">
             <h3>Device Data Table</h3>
+
             <table>
                 <thead>
-                <tr><th>Device</th><th>Drip Rate</th><th>Total Drops</th><th>Status</th></tr>
+                  <tr>
+                    <th>Device</th>
+                    <th>Drip Rate</th>
+                    <th>Total Drops</th>
+                    <th>Status</th>
+                  </tr>
                 </thead>
                 <tbody id="table-body"></tbody>
             </table>
         </div>
+
     </div>
 </div>
 
-<script>
-let devices = {};
-let client = new Paho.MQTT.Client("broker.hivemq.com",8884,"/mqtt","WEB_"+Math.random());
+<!-- ========== START-INFUSION MODAL ========== -->
+<div id="modal-overlay">
+    <div class="modal">
+        <h2>Start Infusion</h2>
 
+        <label>Device</label>
+        <select id="m-device">
+            <option>DEVICE_1</option>
+            <option>DEVICE_2</option>
+            <option>DEVICE_3</option>
+            <option>DEVICE_4</option>
+            <option>DEVICE_5</option>
+        </select>
+
+        <label>Bottle Volume (mL)</label>
+        <input id="m-bottle" type="number" value="500">
+
+        <label>Drop Factor</label>
+        <input id="m-factor" type="number" value="20">
+
+        <label>Duration (min)</label>
+        <input id="m-duration" type="number" value="60">
+
+        <button onclick="sendStart()">Start</button>
+    </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="settings" id="settings-panel" style="display:none; margin:20px;">
+    <h3>Settings</h3>
+    <p>More settings can be added here…</p>
+</div>
+
+<!-- ================= JAVASCRIPT ================= -->
+<script>
+let host = "broker.hivemq.com";
+let port = 8884;
+let path = "/mqtt";
+let clientId = "DRIPSTOP_WEB_" + Math.random();
+
+let client = new Paho.MQTT.Client(host, port, path, clientId);
+
+let devices = {};   // stores device state
+let currentGraphDevice = "DEVICE_1";
+
+client.onConnectionLost = () => setTimeout(connect, 1000);
 client.onMessageArrived = onMessage;
-client.connect({useSSL:true,onSuccess:()=>{
-    client.subscribe("infusion/+/rate");
-    client.subscribe("infusion/+/drops");
-    client.subscribe("infusion/+/status");
-    client.subscribe("infusion/+/battery");
-    client.subscribe("infusion/+/charging");
-}});
+
+function connect() {
+    client.connect({
+        onSuccess: () => {
+            client.subscribe("infusion/+/rate");
+            client.subscribe("infusion/+/drops");
+            client.subscribe("infusion/+/status");
+            client.subscribe("infusion/+/battery");
+            client.subscribe("infusion/+/charging");
+        },
+        useSSL:true
+    });
+}
+connect();
+
+/* ======================================================
+   Device Sidebar + Table Updates
+   ====================================================== */
 
 function ensureDevice(id){
-    if(!devices[id]){
-        devices[id] = {rate:"-",drops:"-",status:"OFFLINE",battery:0,charging:0};
+    if (!devices[id]){
+        devices[id] = {
+            rate:"-",
+            drops:"-",
+            status:"OFFLINE",
+            battery:0,
+            charging:"0"
+        };
         updateSidebar();
+        updateTable();
     }
 }
 
 function updateSidebar(){
     let d = document.getElementById("device-list");
     d.innerHTML = "";
-
-    Object.keys(devices).forEach(id=>{
+    
+    Object.keys(devices).forEach(id => {
         let st = devices[id].status;
+
         d.innerHTML += `
-        <div class="device-item">
+        <div class="device-item" onclick="selectDevice('${id}')">
             <div>
                 <div>${id}</div>
                 <div class="battery" id="bat-${id}">
@@ -336,44 +440,202 @@ function updateSidebar(){
             </div>
             <span class="${st==='ONLINE'?'device-online':'device-offline'}">${st}</span>
         </div>`;
-        renderBattery(id);
+    });
+
+    // apply battery visuals AFTER DOM is updated
+    Object.keys(devices).forEach(id => renderBattery(id));
+}
+
+function updateTable(){
+    let t = document.getElementById("table-body");
+    t.innerHTML = "";
+
+    Object.keys(devices).forEach(id => {
+        let d = devices[id];
+        t.innerHTML += `
+        <tr>
+            <td>${id}</td>
+            <td>${d.rate}</td>
+            <td>${d.drops}</td>
+            <td class="status-${d.status}">${d.status}</td>
+        </tr>`;
     });
 }
 
-function onMessage(msg){
-    let p = msg.destinationName.split("/");
-    let id = p[1];
-    let field = p[2];
-    let val = msg.payloadString;
-    ensureDevice(id);
+function selectDevice(id){
+    currentGraphDevice = id;
+    document.getElementById("graph-device").textContent = id;
 
-    if(field==="rate") devices[id].rate = val;
-    if(field==="drops") devices[id].drops = val;
-    if(field==="status") devices[id].status = val;
-    if(field==="battery") devices[id].battery = parseFloat(val);
-    if(field==="charging") devices[id].charging = val;
-
-    updateSidebar();
+    // reset chart
+    chart.data.labels = [];
+    chart.data.datasets[0].data = [];
+    chart.update();
 }
 
+/* ======================================================
+   Handle Incoming MQTT
+   ====================================================== */
+function onMessage(msg){
+    let topic = msg.destinationName;         // infusion/DEVICE_1/rate
+    let payload = msg.payloadString;
+
+    let parts = topic.split("/");
+    let id = parts[1];
+    let field = parts[2];
+
+    ensureDevice(id);
+
+    if (field === "rate"){
+        let r = parseFloat(payload);
+        if (!isNaN(r)){
+            devices[id].rate = r.toFixed(1);
+            if (id === currentGraphDevice) updateGraph(r);
+            document.getElementById("stat-rate").textContent = devices[id].rate;
+        }
+    }
+    else if (field === "drops"){
+        devices[id].drops = payload;
+        document.getElementById("stat-drops").textContent = payload;
+    }
+    else if (field === "status"){
+        devices[id].status = payload;
+        document.getElementById("stat-status").textContent = payload;
+    }
+    else if (field === "battery"){
+        devices[id].battery = parseFloat(payload) || 0;
+    }
+    else if (field === "charging"){
+        devices[id].charging = payload;
+    }
+
+    updateSidebar();
+    updateTable();
+}
+
+/* ======================================================
+   Battery Blip Logic
+   ====================================================== */
 function renderBattery(id){
-    let v = devices[id].battery || 0;
-    let ch = devices[id].charging || "0";
-    let blips = document.querySelectorAll(`#bat-${id} .blip`);
+    const dev = devices[id];
+    if (!dev) return;
 
-    blips.forEach(b=>b.className="blip");
-    document.querySelectorAll(`#bat-${id} .charging`).forEach(e=>e.remove());
+    const v = dev.battery || 0;
+    const charging = (dev.charging === "1" || dev.charging === 1);
 
-    if(ch==="1"){
-        document.getElementById(`bat-${id}`).innerHTML += `<div class="charging">⚡</div>`;
+    const batEl = document.getElementById(`bat-${id}`);
+    if (!batEl) return;
+
+    // clear previous charging icons
+    const oldCharge = batEl.querySelector(".charging");
+    if (oldCharge) oldCharge.remove();
+
+    const blips = batEl.querySelectorAll(".blip");
+    blips.forEach(b => {
+        b.classList.remove("blip-blue","blip-red","blink");
+    });
+
+    if (charging){
+        // show lightning symbol overlay when charging
+        const span = document.createElement("div");
+        span.className = "charging";
+        span.textContent = "⚡";
+        batEl.appendChild(span);
         return;
     }
 
-    if(v>=3.0){ blips[0].classList.add("blip-blue"); blips[1].classList.add("blip-blue"); }
-    else if(v>=2.5){ blips[0].classList.add("blip-red"); }
-    else { blips[0].classList.add("blip-red"); }
+    // Mapping:
+    // <2.7V           -> blinking red 1 blip
+    // 2.7–3.2V        -> 1 solid red blip
+    // 3.2–3.9V        -> 2 blue blips
+    // >=3.9V          -> 3 blue blips
+
+    if (v < 2.7){
+        blips[0].classList.add("blip-red","blink");
+    } else if (v > 2.7 && v < 3.2){
+        blips[0].classList.add("blip-red");
+    } else if (v >= 3.2 && v < 3.9){
+        blips[0].classList.add("blip-blue");
+        blips[1].classList.add("blip-blue");
+    } else if (v >= 3.9){
+        blips[0].classList.add("blip-blue");
+        blips[1].classList.add("blip-blue");
+        blips[2].classList.add("blip-blue");
+    }
+}
+
+/* ======================================================
+   Start Infusion (modal)
+   ====================================================== */
+function openModal(){ document.getElementById("modal-overlay").style.display = "flex"; }
+function closeModal(){ document.getElementById("modal-overlay").style.display = "none"; }
+
+function sendStart(){
+    let dev = document.getElementById("m-device").value;
+    let bottle = document.getElementById("m-bottle").value;
+    let factor = document.getElementById("m-factor").value;
+    let duration = document.getElementById("m-duration").value;
+
+    let msg = new Paho.MQTT.Message("START:"+bottle+","+factor+","+duration);
+    msg.destinationName = "infusion/" + dev + "/cmd";
+    client.send(msg);
+
+    closeModal();
+}
+
+/* ======================================================
+   SETTINGS PANEL
+   ====================================================== */
+function openSettings(){
+    let s = document.getElementById("settings-panel");
+    s.style.display = s.style.display === "none" ? "block" : "none";
+}
+
+/* ======================================================
+   GRAPH (Chart.js)
+   ====================================================== */
+const chart = new Chart(document.getElementById("chart"), {
+    type:"line",
+    data:{
+        labels:[],
+        datasets:[{
+            label:"Drip Rate",
+            borderColor: "#59A3BE",
+            backgroundColor:"rgba(89,163,190,0.25)",
+            data:[],
+            tension:0.35,
+        }]
+    },
+    options:{
+        responsive:true,
+        animation:false,
+        scales:{
+            x:{ display:false },
+            y:{
+                beginAtZero:true,
+                max:500,
+                ticks:{ stepSize:50 }
+            }
+        }
+    }
+});
+
+let lastUpdate = 0;
+function updateGraph(rate){
+    let now = Date.now();
+
+    chart.data.labels.push("");
+    chart.data.datasets[0].data.push(rate);
+
+    if(chart.data.labels.length>50){
+        chart.data.labels.shift();
+        chart.data.datasets[0].data.shift();
+    }
+
+    if(now-lastUpdate>400){
+        chart.update();
+        lastUpdate = now;
+    }
 }
 </script>
-
 </body>
 </html>
