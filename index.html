@@ -98,7 +98,7 @@ body {
 .device-online { color: green; font-weight:600; }
 .device-offline { color: red; font-weight:600; }
 
-/* BATTERY ICON IN SIDEBAR */
+/* BATTERY ICON */
 .battery {
     width: 24px;
     height: 12px;
@@ -138,10 +138,10 @@ body {
     font-size:10px;
 }
 
-/* blinking effect for <2.7V */
+/* blinking for <2.7V */
 @keyframes blink {
     0% { opacity:1; }
-    50% { opacity:0.2; }
+    50% { opacity:0.1; }
     100% { opacity:1; }
 }
 .blink {
@@ -416,8 +416,6 @@ function ensureDevice(id){
             battery:0,
             charging:"0"
         };
-        updateSidebar();
-        updateTable();
     }
 }
 
@@ -442,7 +440,6 @@ function updateSidebar(){
         </div>`;
     });
 
-    // apply battery visuals AFTER DOM is updated
     Object.keys(devices).forEach(id => renderBattery(id));
 }
 
@@ -466,7 +463,6 @@ function selectDevice(id){
     currentGraphDevice = id;
     document.getElementById("graph-device").textContent = id;
 
-    // reset chart
     chart.data.labels = [];
     chart.data.datasets[0].data = [];
     chart.update();
@@ -476,7 +472,7 @@ function selectDevice(id){
    Handle Incoming MQTT
    ====================================================== */
 function onMessage(msg){
-    let topic = msg.destinationName;         // infusion/DEVICE_1/rate
+    let topic = msg.destinationName;
     let payload = msg.payloadString;
 
     let parts = topic.split("/");
@@ -525,7 +521,6 @@ function renderBattery(id){
     const batEl = document.getElementById(`bat-${id}`);
     if (!batEl) return;
 
-    // clear previous charging icons
     const oldCharge = batEl.querySelector(".charging");
     if (oldCharge) oldCharge.remove();
 
@@ -535,7 +530,6 @@ function renderBattery(id){
     });
 
     if (charging){
-        // show lightning symbol overlay when charging
         const span = document.createElement("div");
         span.className = "charging";
         span.textContent = "⚡";
@@ -543,15 +537,15 @@ function renderBattery(id){
         return;
     }
 
-    // Mapping:
-    // <2.7V           -> blinking red 1 blip
-    // 2.7–3.2V        -> 1 solid red blip
-    // 3.2–3.9V        -> 2 blue blips
-    // >=3.9V          -> 3 blue blips
+    // Voltage → blips:
+    // v < 2.7           : 1 red blinking
+    // 2.7 <= v < 3.2    : 1 solid red
+    // 3.2 <= v < 3.9    : 2 blue
+    // v >= 3.9          : 3 blue
 
     if (v < 2.7){
         blips[0].classList.add("blip-red","blink");
-    } else if (v > 2.7 && v < 3.2){
+    } else if (v >= 2.7 && v < 3.2){
         blips[0].classList.add("blip-red");
     } else if (v >= 3.2 && v < 3.9){
         blips[0].classList.add("blip-blue");
