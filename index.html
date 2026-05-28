@@ -4,798 +4,1070 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DripStop IV Monitor</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <style>
 :root {
-  --bg: #0b0f14;
-  --surface: #131920;
-  --surface2: #1a2330;
-  --border: rgba(255,255,255,0.06);
-  --blue: #38bdf8;
-  --blue-dim: rgba(56,189,248,0.12);
-  --green: #34d399;
-  --green-dim: rgba(52,211,153,0.12);
-  --red: #f87171;
-  --red-dim: rgba(248,113,113,0.12);
-  --amber: #fbbf24;
-  --amber-dim: rgba(251,191,36,0.12);
-  --text: #e2e8f0;
-  --muted: #64748b;
-  --mono: 'DM Mono', monospace;
-  --sans: 'DM Sans', sans-serif;
+  --bg:#eef7fb; --card:#fff; --blue:#2f88a8; --accent:#59a3be;
+  --green:#1ea672; --red:#e65b4e; --yellow:#f4b740;
+  --text:#10202a; --muted:#70818a;
+  --shadow:0 8px 30px rgba(0,0,0,0.06); --radius:18px;
 }
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--sans);
-  min-height: 100vh;
-  overflow-x: hidden;
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ── LOGIN SCREEN ── */
+#loginScreen {
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;z-index:1000;
+}
+.login-box {
+  background:var(--card);border-radius:24px;box-shadow:var(--shadow);
+  padding:48px 40px;width:100%;max-width:400px;text-align:center;
+}
+.login-logo {font-size:32px;font-weight:800;color:var(--blue);margin-bottom:6px;}
+.login-sub {font-size:14px;color:var(--muted);margin-bottom:32px;}
+.login-field {
+  width:100%;border:1.5px solid #d0e8f2;border-radius:10px;
+  padding:12px 16px;font-family:'Inter',sans-serif;font-size:14px;
+  color:var(--text);outline:none;margin-bottom:12px;
+  transition:border-color 0.2s;background:var(--bg);
+}
+.login-field:focus{border-color:var(--blue);}
+.login-btn {
+  width:100%;background:linear-gradient(90deg,var(--blue),var(--accent));
+  color:#fff;border:none;border-radius:10px;padding:13px;
+  font-family:'Inter',sans-serif;font-size:15px;font-weight:700;
+  cursor:pointer;transition:opacity 0.2s;margin-top:4px;
+}
+.login-btn:hover{opacity:0.88;}
+.login-err {font-size:13px;color:var(--red);margin-top:10px;min-height:18px;}
+.login-wards {display:flex;flex-direction:column;gap:8px;margin-bottom:20px;}
+.ward-btn {
+  background:var(--bg);border:1.5px solid #d0e8f2;border-radius:10px;
+  padding:11px 16px;font-family:'Inter',sans-serif;font-size:14px;
+  font-weight:600;color:var(--text);cursor:pointer;transition:all 0.2s;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.ward-btn:hover,.ward-btn.selected{background:var(--blue);color:#fff;border-color:var(--blue);}
+.ward-badge{font-size:11px;font-weight:500;opacity:0.75;}
+
+/* ── MAIN APP ── */
+#appScreen{display:none;}
+.topbar {
+  background:var(--card);box-shadow:0 2px 12px rgba(0,0,0,0.06);
+  padding:0 24px;height:64px;display:flex;align-items:center;
+  justify-content:space-between;position:sticky;top:0;z-index:100;
+}
+.topbar-left{display:flex;align-items:center;gap:16px;}
+.brand{font-size:22px;font-weight:800;color:var(--blue);}
+.ward-tag {
+  background:linear-gradient(90deg,var(--blue),var(--accent));
+  color:#fff;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;
+}
+.topbar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.conn-pill {
+  display:flex;align-items:center;gap:6px;padding:6px 14px;
+  border-radius:20px;font-size:12px;font-weight:600;background:var(--card);
+  border:1.5px solid #d0e8f2;transition:all 0.3s;
+}
+.conn-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.pill-connected{border-color:#b2edd4;color:var(--green);}
+.pill-connected .conn-dot{background:var(--green);animation:blink 1.6s infinite;}
+.pill-connecting{border-color:#b2d8ee;color:var(--blue);}
+.pill-connecting .conn-dot{background:var(--blue);animation:blink 0.5s infinite;}
+.pill-error{border-color:#f5c0bb;color:var(--red);}
+.pill-error .conn-dot{background:var(--red);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.icon-btn {
+  background:var(--bg);border:1.5px solid #d0e8f2;border-radius:10px;
+  padding:7px 14px;font-size:13px;font-weight:600;color:var(--blue);
+  cursor:pointer;transition:all 0.2s;white-space:nowrap;
+}
+.icon-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue);}
+.logout-btn{color:var(--red);border-color:#f5c0bb;}
+.logout-btn:hover{background:var(--red);color:#fff;border-color:var(--red);}
+
+/* ── SUMMARY BAR ── */
+.summary-bar {
+  display:flex;gap:12px;padding:16px 24px 0;flex-wrap:wrap;
+}
+.sum-chip {
+  background:var(--card);border-radius:12px;box-shadow:var(--shadow);
+  padding:10px 18px;display:flex;align-items:center;gap:8px;
+  font-size:13px;font-weight:600;
+}
+.sum-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+
+/* ── DEVICE GRID ── */
+.grid-wrap{padding:16px 24px 32px;}
+.section-hdr {
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:16px;
+}
+.section-title{font-size:20px;font-weight:700;}
+.add-btn {
+  background:linear-gradient(90deg,var(--blue),var(--accent));
+  color:#fff;border:none;border-radius:10px;padding:9px 20px;
+  font-family:'Inter',sans-serif;font-size:13px;font-weight:700;
+  cursor:pointer;transition:opacity 0.2s;
+}
+.add-btn:hover{opacity:0.88;}
+.device-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  gap:18px;
+}
+.empty-state {
+  grid-column:1/-1;text-align:center;padding:60px 20px;
+  color:var(--muted);font-size:15px;
+}
+.empty-state b{display:block;font-size:22px;color:var(--blue);margin-bottom:8px;}
+
+/* ── DEVICE CARD ── */
+.device-card {
+  background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:20px;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;
+  border:2px solid transparent;position:relative;overflow:hidden;
+}
+.device-card:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(0,0,0,0.10);}
+.device-card.alarm-active{border-color:var(--red);}
+.device-card.status-ok{border-color:#b2edd4;}
+.card-header {
+  display:flex;align-items:flex-start;justify-content:space-between;
+  margin-bottom:14px;gap:8px;
+}
+.card-patient{font-size:16px;font-weight:700;line-height:1.3;}
+.card-device{font-size:11px;color:var(--muted);font-weight:500;margin-top:2px;}
+.alarm-badge {
+  font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;
+  white-space:nowrap;flex-shrink:0;
+}
+.badge-normal  {background:#e6f7f0;color:var(--green);}
+.badge-warn    {background:#fff8e6;color:var(--yellow);}
+.badge-error   {background:#fdecea;color:var(--red);}
+.badge-calib   {background:#e6f2f7;color:var(--blue);}
+.badge-offline {background:#f0f0f0;color:var(--muted);}
+.card-metrics {
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;
+}
+.metric-box{text-align:center;}
+.metric-val {
+  font-size:26px;font-weight:800;line-height:1;
+  transition:color 0.3s;
+}
+.metric-lbl{font-size:10px;color:var(--muted);font-weight:600;margin-top:3px;text-transform:uppercase;}
+.card-footer {
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:11px;color:var(--muted);padding-top:10px;
+  border-top:1px solid #eef2f5;
+}
+.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;}
+.offline-overlay {
+  position:absolute;inset:0;background:rgba(255,255,255,0.7);
+  display:flex;align-items:center;justify-content:center;
+  border-radius:var(--radius);font-size:14px;font-weight:700;color:var(--muted);
 }
 
-/* ── grid bg ── */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(56,189,248,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(56,189,248,0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
-  z-index: 0;
+/* ── MODAL BASE ── */
+.modal-bg {
+  position:fixed;inset:0;background:rgba(16,32,42,0.45);
+  display:none;align-items:center;justify-content:center;z-index:500;padding:16px;
+}
+.modal-bg.open{display:flex;}
+.modal {
+  background:var(--card);border-radius:24px;box-shadow:0 24px 60px rgba(0,0,0,0.15);
+  width:100%;max-height:90vh;overflow-y:auto;
+}
+.modal-hdr {
+  padding:24px 28px 0;display:flex;align-items:center;
+  justify-content:space-between;
+}
+.modal-title{font-size:20px;font-weight:800;}
+.close-btn {
+  background:var(--bg);border:none;border-radius:8px;
+  width:32px;height:32px;cursor:pointer;font-size:18px;color:var(--muted);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.close-btn:hover{background:#d0e8f2;color:var(--blue);}
+.modal-body{padding:20px 28px 28px;}
+
+/* ── ADD DEVICE MODAL ── */
+.form-row{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+.form-label{font-size:13px;font-weight:600;color:var(--muted);}
+.form-input {
+  border:1.5px solid #d0e8f2;border-radius:10px;padding:10px 14px;
+  font-family:'Inter',sans-serif;font-size:14px;color:var(--text);
+  outline:none;transition:border-color 0.2s;background:var(--bg);
+}
+.form-input:focus{border-color:var(--blue);}
+.form-err{font-size:12px;color:var(--red);margin-top:-8px;}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+.btn-primary {
+  background:linear-gradient(90deg,var(--blue),var(--accent));
+  color:#fff;border:none;border-radius:10px;padding:10px 24px;
+  font-family:'Inter',sans-serif;font-size:14px;font-weight:700;cursor:pointer;
+}
+.btn-secondary {
+  background:var(--bg);border:1.5px solid #d0e8f2;border-radius:10px;
+  padding:10px 20px;font-family:'Inter',sans-serif;font-size:14px;
+  font-weight:600;color:var(--muted);cursor:pointer;
+}
+.btn-danger {
+  background:#fdecea;border:1.5px solid #f5c0bb;border-radius:10px;
+  padding:10px 20px;font-family:'Inter',sans-serif;font-size:14px;
+  font-weight:600;color:var(--red);cursor:pointer;
 }
 
-.wrap { position: relative; z-index: 1; padding: 24px; max-width: 1400px; margin: 0 auto; }
+/* ── DETAIL MODAL ── */
+.detail-top {
+  display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;
+}
+.detail-metric {
+  background:var(--bg);border-radius:14px;padding:16px;text-align:center;
+}
+.detail-val{font-size:40px;font-weight:800;line-height:1;transition:color 0.3s;}
+.detail-lbl{font-size:12px;color:var(--muted);font-weight:600;margin-top:6px;text-transform:uppercase;}
+.detail-info-grid {
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;
+}
+.info-chip {
+  background:var(--bg);border-radius:12px;padding:12px 16px;
+}
+.info-lbl{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px;}
+.info-val{font-size:16px;font-weight:700;}
+.chart-wrap{background:var(--bg);border-radius:14px;padding:16px;margin-bottom:16px;}
+.chart-title{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:12px;text-transform:uppercase;}
+.detail-log{max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
+.detail-log::-webkit-scrollbar{width:3px;}
+.detail-log::-webkit-scrollbar-thumb{background:#d0e8f2;border-radius:2px;}
 
-/* ── header ── */
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 28px;
-  flex-wrap: wrap;
-  gap: 12px;
+/* ── WARD SETUP MODAL ── */
+.ward-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.ward-item {
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--bg);border-radius:10px;padding:10px 14px;
+  font-size:14px;font-weight:600;
 }
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.brand-icon {
-  width: 36px; height: 36px;
-  background: var(--blue-dim);
-  border: 1px solid rgba(56,189,248,0.3);
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-}
-.brand-icon svg { width: 18px; height: 18px; stroke: var(--blue); }
-.brand-name {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.3px;
-  color: var(--text);
-}
-.brand-sub { font-size: 12px; color: var(--muted); font-family: var(--mono); margin-top: 1px; }
-
-.header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-
-/* ── toggle buttons ── */
-.mode-toggles {
-  display: flex;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 3px;
-  gap: 2px;
-}
-.mode-btn {
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 500;
-  padding: 6px 14px;
-  border-radius: 7px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  background: transparent;
-  color: var(--muted);
-}
-.mode-btn.active-mock {
-  background: var(--amber-dim);
-  color: var(--amber);
-  border: 1px solid rgba(251,191,36,0.25);
-}
-.mode-btn.active-live {
-  background: var(--green-dim);
-  color: var(--green);
-  border: 1px solid rgba(52,211,153,0.25);
-}
-.mode-btn:not(.active-mock):not(.active-live):hover {
-  background: var(--surface2);
-  color: var(--text);
+.ward-item-del{
+  background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;
 }
 
-/* ── status pill ── */
-.status-pill {
-  display: flex; align-items: center; gap: 6px;
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 500;
-  padding: 6px 14px;
-  border-radius: 20px;
-  letter-spacing: 0.5px;
-  transition: all 0.3s;
+@media(max-width:700px){
+  .detail-top{grid-template-columns:1fr 1fr;}
+  .summary-bar{padding:12px 16px 0;}
+  .grid-wrap{padding:12px 16px 24px;}
+  .topbar{padding:0 14px;}
 }
-.status-pill .dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  animation: pulse-dot 2s infinite;
-}
-@keyframes pulse-dot {
-  0%,100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.8); }
-}
-.pill-mock { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(251,191,36,0.2); }
-.pill-mock .dot { background: var(--amber); }
-.pill-connected { background: var(--green-dim); color: var(--green); border: 1px solid rgba(52,211,153,0.2); }
-.pill-connected .dot { background: var(--green); }
-.pill-connecting { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(56,189,248,0.2); }
-.pill-connecting .dot { background: var(--blue); animation: pulse-dot 0.6s infinite; }
-.pill-error { background: var(--red-dim); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
-.pill-error .dot { background: var(--red); animation: none; }
-
-/* ── alarm banner ── */
-.alarm-banner {
-  display: flex; align-items: center; gap: 14px;
-  padding: 14px 20px;
-  border-radius: 12px;
-  margin-bottom: 24px;
-  border: 1px solid transparent;
-  transition: all 0.4s;
-  font-size: 14px;
-  font-weight: 500;
-}
-.alarm-icon { font-size: 18px; flex-shrink: 0; }
-.alarm-text { flex: 1; }
-.alarm-time { font-family: var(--mono); font-size: 11px; opacity: 0.7; }
-.alarm-normal  { background: var(--green-dim); border-color: rgba(52,211,153,0.2); color: var(--green); }
-.alarm-warning { background: var(--amber-dim); border-color: rgba(251,191,36,0.25); color: var(--amber); }
-.alarm-error   { background: var(--red-dim); border-color: rgba(248,113,113,0.25); color: var(--red); }
-
-/* ── main grid ── */
-.main-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 320px;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-@media (max-width: 1100px) { .main-grid { grid-template-columns: 1fr 1fr; } .side-col { display: none; } }
-@media (max-width: 680px) { .main-grid { grid-template-columns: 1fr; } }
-
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 24px;
-  position: relative;
-  overflow: hidden;
-}
-.card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 16px;
-  opacity: 0;
-  transition: opacity 0.3s;
-  pointer-events: none;
-}
-.card:hover::after { opacity: 1; }
-
-/* ── big metric cards ── */
-.metric-card { min-height: 180px; }
-.metric-label {
-  font-size: 11px;
-  font-family: var(--mono);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 16px;
-  display: flex; align-items: center; gap: 8px;
-}
-.metric-label .tag {
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 9px;
-  letter-spacing: 1px;
-}
-.tag-live { background: var(--green-dim); color: var(--green); border: 1px solid rgba(52,211,153,0.2); }
-.tag-mock { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(251,191,36,0.2); }
-
-.metric-value {
-  font-size: 72px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -3px;
-  font-family: var(--mono);
-  transition: color 0.3s;
-}
-.metric-unit {
-  font-size: 14px;
-  color: var(--muted);
-  margin-top: 10px;
-  font-family: var(--mono);
-  letter-spacing: 1px;
-}
-.metric-bar {
-  margin-top: 16px;
-  height: 3px;
-  background: var(--border);
-  border-radius: 2px;
-  overflow: hidden;
-}
-.metric-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.5s ease, background 0.3s;
-}
-
-/* ── side column ── */
-.side-col { display: flex; flex-direction: column; gap: 12px; }
-.mini-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.mini-label { font-size: 11px; font-family: var(--mono); letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
-.mini-value { font-size: 22px; font-weight: 700; font-family: var(--mono); transition: color 0.3s; }
-.mini-icon {
-  width: 38px; height: 38px; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-
-/* ── bottom grid ── */
-.bottom-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
-@media (max-width: 900px) { .bottom-grid { grid-template-columns: 1fr; } }
-
-.section-label {
-  font-size: 11px; font-family: var(--mono); letter-spacing: 1.5px;
-  text-transform: uppercase; color: var(--muted);
-  margin-bottom: 20px;
-  display: flex; align-items: center; gap: 10px;
-}
-.section-label::after {
-  content: '';
-  flex: 1; height: 1px;
-  background: var(--border);
-}
-
-/* ── chart ── */
-.chart-wrap { position: relative; }
-
-/* ── logs ── */
-.logs-list { display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; }
-.logs-list::-webkit-scrollbar { width: 3px; }
-.logs-list::-webkit-scrollbar-track { background: transparent; }
-.logs-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-.log-entry {
-  display: flex; gap: 10px; align-items: flex-start;
-  padding: 10px 12px;
-  background: var(--surface2);
-  border-radius: 8px;
-  border-left: 2px solid var(--muted);
-  font-size: 12px;
-  animation: log-in 0.3s ease;
-}
-@keyframes log-in { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
-.log-entry.log-normal { border-color: var(--green); }
-.log-entry.log-warn   { border-color: var(--amber); }
-.log-entry.log-error  { border-color: var(--red); }
-.log-time { font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; padding-top: 1px; min-width: 56px; }
-.log-msg { color: var(--text); line-height: 1.4; }
-
-/* ── ws config panel ── */
-.ws-config {
-  background: var(--surface2);
-  border: 1px solid rgba(56,189,248,0.15);
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-bottom: 16px;
-  display: none;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.ws-config.visible { display: flex; }
-.ws-config label { font-size: 11px; font-family: var(--mono); color: var(--muted); letter-spacing: 1px; white-space: nowrap; }
-.ws-input {
-  flex: 1;
-  min-width: 200px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 7px 12px;
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--text);
-  outline: none;
-  transition: border-color 0.2s;
-}
-.ws-input:focus { border-color: rgba(56,189,248,0.4); }
-.ws-connect-btn {
-  background: var(--blue-dim);
-  border: 1px solid rgba(56,189,248,0.3);
-  color: var(--blue);
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  padding: 7px 16px;
-  border-radius: 7px;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-.ws-connect-btn:hover { background: rgba(56,189,248,0.2); }
-
-/* ── footer ── */
-.footer { margin-top: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-.footer-note { font-size: 11px; font-family: var(--mono); color: var(--muted); letter-spacing: 0.5px; }
-.last-update { font-size: 11px; font-family: var(--mono); color: var(--muted); }
-
-/* ── color states ── */
-.col-blue   { color: var(--blue); }
-.col-green  { color: var(--green); }
-.col-red    { color: var(--red); }
-.col-amber  { color: var(--amber); }
-.col-muted  { color: var(--muted); }
-.bg-blue    { background: var(--blue-dim); }
-.bg-green   { background: var(--green-dim); }
-.bg-red     { background: var(--red-dim); }
-.bg-amber   { background: var(--amber-dim); }
 </style>
 </head>
 <body>
-<div class="wrap">
 
-  <!-- HEADER -->
-  <div class="header">
-    <div class="brand">
-      <div class="brand-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2L8 8H4l4 4-2 6 6-3 6 3-2-6 4-4h-4L12 2z"/>
-        </svg>
+<!-- ═══════════════════════════════════════════════════════
+     LOGIN SCREEN
+════════════════════════════════════════════════════════ -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">DripStop</div>
+    <div class="login-sub">IV Infusion Monitor · Staff Login</div>
+    <div id="loginStep1">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;font-weight:500;">Select your ward</p>
+      <div class="login-wards" id="wardList"></div>
+      <button class="login-btn" style="margin-top:4px;" onclick="showAddWardLogin()">+ Add Ward</button>
+      <div id="addWardRow" style="display:none;margin-top:12px;">
+        <input class="login-field" id="newWardName" placeholder="Ward name (e.g. ICU-A)">
+        <input class="login-field" id="newWardPin" type="password" placeholder="Set PIN (4 digits)">
+        <button class="login-btn" onclick="createWard()">Create Ward</button>
       </div>
+    </div>
+    <div id="loginStep2" style="display:none;">
+      <p style="font-size:14px;font-weight:700;margin-bottom:16px;" id="loginWardLabel"></p>
+      <input class="login-field" type="password" id="pinInput" placeholder="Enter PIN" maxlength="6"
+             onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="login-btn" onclick="doLogin()">Login</button>
+      <button class="btn-secondary" style="width:100%;margin-top:8px;" onclick="backToWards()">← Back</button>
+      <div class="login-err" id="loginErr"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MAIN APP
+════════════════════════════════════════════════════════ -->
+<div id="appScreen">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="brand">DripStop</div>
+      <div class="ward-tag" id="wardLabel">Ward —</div>
+    </div>
+    <div class="topbar-right">
+      <div class="conn-pill pill-connecting" id="connPill">
+        <span class="conn-dot"></span>
+        <span id="connLabel">Connecting…</span>
+      </div>
+      <button class="icon-btn" onclick="openWardSetup()">⚙ Wards</button>
+      <button class="icon-btn logout-btn" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <!-- SUMMARY BAR -->
+  <div class="summary-bar" id="summaryBar"></div>
+
+  <!-- DEVICE GRID -->
+  <div class="grid-wrap">
+    <div class="section-hdr">
+      <div class="section-title">Devices — <span id="deviceCount">0</span></div>
+      <button class="add-btn" onclick="openAddDevice()">+ Add Device</button>
+    </div>
+    <div class="device-grid" id="deviceGrid">
+      <div class="empty-state">
+        <b>No devices added yet</b>
+        Click "+ Add Device" to register an ESP32 device and assign a patient.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     ADD / EDIT DEVICE MODAL
+════════════════════════════════════════════════════════ -->
+<div class="modal-bg" id="addDeviceModal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-hdr">
+      <div class="modal-title" id="addDeviceTitle">Add Device</div>
+      <button class="close-btn" onclick="closeModal('addDeviceModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="form-label">Device ID (must match ESP32 config)</label>
+        <input class="form-input" id="fDeviceId" placeholder="e.g. DEVICE_01">
+        <span class="form-err" id="fDeviceIdErr"></span>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Patient Name</label>
+        <input class="form-input" id="fPatientName" placeholder="e.g. John Smith">
+        <span class="form-err" id="fPatientNameErr"></span>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Bed / Room</label>
+        <input class="form-input" id="fBed" placeholder="e.g. Bed 4A">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Ward</label>
+        <select class="form-input" id="fWard"></select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-danger" id="deleteDevBtn" onclick="deleteDevice()" style="display:none;">Delete</button>
+        <button class="btn-secondary" onclick="closeModal('addDeviceModal')">Cancel</button>
+        <button class="btn-primary" onclick="saveDevice()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     DEVICE DETAIL MODAL
+════════════════════════════════════════════════════════ -->
+<div class="modal-bg" id="detailModal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-hdr">
       <div>
-        <div class="brand-name">DripStop</div>
-        <div class="brand-sub">IV MONITOR · R15</div>
+        <div class="modal-title" id="detailPatient">—</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;" id="detailMeta">—</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="icon-btn" onclick="editCurrentDevice()" style="font-size:12px;padding:6px 12px;">Edit</button>
+        <button class="close-btn" onclick="closeModal('detailModal')">✕</button>
       </div>
     </div>
-    <div class="header-right">
-      <div class="mode-toggles">
-        <button class="mode-btn active-mock" id="btnMock" onclick="setMode('mock')">⬡ Mock</button>
-        <button class="mode-btn" id="btnLive" onclick="setMode('live')">◉ Live</button>
-      </div>
-      <div class="status-pill pill-mock" id="statusPill">
-        <span class="dot"></span>
-        <span id="pillText">MOCK MODE</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- WS CONFIG (shown only in live mode) -->
-  <div class="ws-config" id="wsConfig">
-    <label>WS://</label>
-    <input class="ws-input" id="wsUrl" type="text" value="192.168.1.100:81" placeholder="ESP32-IP:81">
-    <button class="ws-connect-btn" onclick="connectWS()">CONNECT</button>
-  </div>
-
-  <!-- ALARM BANNER -->
-  <div class="alarm-banner alarm-normal" id="alarmBanner">
-    <span class="alarm-icon">✦</span>
-    <span class="alarm-text" id="alarmText">System Normal · No Active Alarms</span>
-    <span class="alarm-time" id="alarmTime">--:--:--</span>
-  </div>
-
-  <!-- MAIN GRID -->
-  <div class="main-grid">
-
-    <!-- CURRENT RATE -->
-    <div class="card metric-card">
-      <div class="metric-label">
-        Current Drip Rate
-        <span class="tag" id="rateTag">MOCK</span>
-      </div>
-      <div class="metric-value col-blue" id="dripRate">---</div>
-      <div class="metric-unit">DROPS / MIN</div>
-      <div class="metric-bar">
-        <div class="metric-bar-fill" id="rateBar" style="width:0%;background:var(--blue)"></div>
-      </div>
-    </div>
-
-    <!-- TIME REMAINING -->
-    <div class="card metric-card">
-      <div class="metric-label">
-        Time Remaining
-        <span class="tag" id="timeTag">MOCK</span>
-      </div>
-      <div class="metric-value col-green" id="timeRemaining">---</div>
-      <div class="metric-unit">MINUTES</div>
-      <div class="metric-bar">
-        <div class="metric-bar-fill" id="timeBar" style="width:0%;background:var(--green)"></div>
-      </div>
-    </div>
-
-    <!-- SIDE COLUMN -->
-    <div class="side-col">
-      <div class="mini-card">
-        <div>
-          <div class="mini-label">Set Rate</div>
-          <div class="mini-value col-blue" id="setRate">--- dpm</div>
+    <div class="modal-body">
+      <div class="detail-top">
+        <div class="detail-metric">
+          <div class="detail-val" id="dRate" style="color:var(--blue)">---</div>
+          <div class="detail-lbl">Current Rate (dpm)</div>
         </div>
-        <div class="mini-icon bg-blue">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        <div class="detail-metric">
+          <div class="detail-val" id="dSet" style="color:var(--muted)">---</div>
+          <div class="detail-lbl">Set Rate (dpm)</div>
+        </div>
+        <div class="detail-metric">
+          <div class="detail-val" id="dTime" style="color:var(--green)">---</div>
+          <div class="detail-lbl">Time Remaining (min)</div>
         </div>
       </div>
-      <div class="mini-card">
-        <div>
-          <div class="mini-label">Drop Factor</div>
-          <div class="mini-value col-muted" id="dropFactor">--</div>
+      <div class="detail-info-grid">
+        <div class="info-chip">
+          <div class="info-lbl">Status</div>
+          <div class="info-val" id="dStatus" style="color:var(--muted)">---</div>
         </div>
-        <div class="mini-icon" style="background:var(--surface2)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M12 2C6 2 4 10 4 14a8 8 0 0016 0C20 10 18 2 12 2z"/></svg>
+        <div class="info-chip">
+          <div class="info-lbl">Alarm</div>
+          <div class="info-val" id="dAlarm" style="color:var(--green)">NORMAL</div>
+        </div>
+        <div class="info-chip">
+          <div class="info-lbl">Drop Factor</div>
+          <div class="info-val" id="dDF">--</div>
+        </div>
+        <div class="info-chip">
+          <div class="info-lbl">Last Update</div>
+          <div class="info-val" id="dLastSeen" style="font-size:13px;">---</div>
         </div>
       </div>
-      <div class="mini-card">
-        <div>
-          <div class="mini-label">Status</div>
-          <div class="mini-value" id="infusionStatus" style="color:var(--muted)">---</div>
-        </div>
-        <div class="mini-icon bg-green" id="statusIcon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- BOTTOM GRID -->
-  <div class="bottom-grid">
-    <div class="card">
-      <div class="section-label">Live Rate Trend</div>
       <div class="chart-wrap">
-        <canvas id="rateChart" height="100"></canvas>
+        <div class="chart-title">Rate Trend</div>
+        <canvas id="detailChart" height="80"></canvas>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">
+        Event Log
+      </div>
+      <div class="detail-log" id="detailLog"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     WARD SETUP MODAL
+════════════════════════════════════════════════════════ -->
+<div class="modal-bg" id="wardSetupModal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-hdr">
+      <div class="modal-title">Ward Management</div>
+      <button class="close-btn" onclick="closeModal('wardSetupModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="ward-list" id="wardMgmtList"></div>
+      <hr style="border:none;border-top:1px solid #eef2f5;margin-bottom:16px;">
+      <div class="form-row">
+        <label class="form-label">New Ward Name</label>
+        <input class="form-input" id="wsWardName" placeholder="e.g. Paediatric-B">
+      </div>
+      <div class="form-row">
+        <label class="form-label">PIN (4 digits)</label>
+        <input class="form-input" type="password" id="wsWardPin" placeholder="4-digit PIN" maxlength="6">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('wardSetupModal')">Close</button>
+        <button class="btn-primary" onclick="addWardFromSetup()">Add Ward</button>
       </div>
     </div>
-    <div class="card">
-      <div class="section-label">Event Log</div>
-      <div class="logs-list" id="logsContainer"></div>
-    </div>
   </div>
-
-  <!-- FOOTER -->
-  <div class="footer">
-    <div class="footer-note">DRIPSTOP IV MONITOR · ESP32-S3 TELEMETRY BRIDGE · PICO R15</div>
-    <div class="last-update">LAST UPDATE: <span id="lastUpdate">--:--:--</span></div>
-  </div>
-
 </div>
 
 <script>
 // ================================================================
-// STATE
+// MQTT CONFIG — HiveMQ public broker (no account needed)
+// Each ESP32 publishes to: dripstop/<DEVICE_ID>/telemetry
+// Dashboard subscribes to: dripstop/+/telemetry  (wildcard)
 // ================================================================
-let mode = 'mock';          // 'mock' | 'live'
-let ws = null;
-let wsRetryTimer = null;
-let mockTimer = null;
-let mockTime = 60;
-let mockRate = 68;
-const MAX_POINTS = 60;
+const MQTT_URL    = 'wss://broker.hivemq.com:8884/mqtt';
+const MQTT_TOPIC  = 'dripstop/+/telemetry';
+const TOPIC_PFX   = 'dripstop/';
+const TOPIC_SFX   = '/telemetry';
 
-// Live data object — updated by either mock or WS
-const live = {
-  RATE: null, SET: null, TIME: null,
-  ALARM: 'NORMAL', STATUS: 'IDLE', DF: 20
+// ================================================================
+// STORAGE HELPERS
+// ================================================================
+const LS = {
+  get: k  => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set: (k,v) => localStorage.setItem(k, JSON.stringify(v)),
+  del: k  => localStorage.removeItem(k),
 };
 
+function getWards()   { return LS.get('ds_wards')   || []; }
+function getDevices() { return LS.get('ds_devices') || []; }
+function saveWards(w)   { LS.set('ds_wards', w); }
+function saveDevices(d) { LS.set('ds_devices', d); }
+
 // ================================================================
-// CHART
+// SESSION
 // ================================================================
-const ctx = document.getElementById('rateChart').getContext('2d');
-const chart = new Chart(ctx, {
-  type: 'line',
-  data: {
-    labels: [],
-    datasets: [{
-      data: [],
-      borderColor: '#38bdf8',
-      backgroundColor: 'rgba(56,189,248,0.07)',
-      tension: 0.4,
-      fill: true,
-      borderWidth: 2,
-      pointRadius: 0,
-      pointHoverRadius: 4,
-    }]
-  },
-  options: {
-    responsive: true,
-    animation: false,
-    interaction: { mode: 'index', intersect: false },
-    plugins: { legend: { display: false }, tooltip: {
-      backgroundColor: '#131920',
-      titleColor: '#64748b',
-      bodyColor: '#e2e8f0',
-      borderColor: 'rgba(255,255,255,0.06)',
-      borderWidth: 1,
-      callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(0)} dpm` }
-    }},
-    scales: {
-      x: { display: false },
-      y: {
-        min: 0,
-        grid: { color: 'rgba(255,255,255,0.04)' },
-        ticks: { color: '#64748b', font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 5 }
-      }
-    }
+let currentWard = null;  // { name, pin }
+let editingDeviceId = null;
+let detailDeviceId  = null;
+let detailChartObj  = null;
+let mqttClient      = null;
+
+// Live telemetry: deviceId → { RATE, SET, TIME, ALARM, STATUS, DF, lastSeen, history[], log[] }
+const telemetry = {};
+
+// ================================================================
+// LOGIN
+// ================================================================
+function renderWardButtons() {
+  const wards = getWards();
+  const el = document.getElementById('wardList');
+  if (!wards.length) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--muted);text-align:center;">No wards yet — create one below.</p>';
+    return;
   }
-});
+  el.innerHTML = wards.map(w => `
+    <button class="ward-btn" onclick="selectWard('${w.name}')">
+      <span>${w.name}</span>
+      <span class="ward-badge">● PIN set</span>
+    </button>`).join('');
+}
 
-function pushChartPoint(rate) {
-  const t = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  chart.data.labels.push(t);
-  chart.data.datasets[0].data.push(rate);
-  if (chart.data.labels.length > MAX_POINTS) {
-    chart.data.labels.shift();
-    chart.data.datasets[0].data.shift();
+function selectWard(name) {
+  document.getElementById('loginStep1').style.display = 'none';
+  document.getElementById('loginStep2').style.display = '';
+  document.getElementById('loginWardLabel').textContent = '🏥 ' + name;
+  document.getElementById('pinInput').value = '';
+  document.getElementById('loginErr').textContent = '';
+  document.getElementById('pinInput').dataset.ward = name;
+  setTimeout(() => document.getElementById('pinInput').focus(), 100);
+}
+
+function backToWards() {
+  document.getElementById('loginStep2').style.display = 'none';
+  document.getElementById('loginStep1').style.display = '';
+}
+
+function doLogin() {
+  const wardName = document.getElementById('pinInput').dataset.ward;
+  const pin      = document.getElementById('pinInput').value.trim();
+  const wards    = getWards();
+  const ward     = wards.find(w => w.name === wardName);
+  if (!ward) return;
+  if (ward.pin !== pin) {
+    document.getElementById('loginErr').textContent = 'Incorrect PIN. Try again.';
+    document.getElementById('pinInput').value = '';
+    return;
   }
-  chart.update('none');
+  currentWard = ward;
+  LS.set('ds_session', { ward: ward.name, ts: Date.now() });
+  showApp();
 }
 
-// ================================================================
-// LOGS
-// ================================================================
-const logContainer = document.getElementById('logsContainer');
-function addLog(msg, type = 'normal') {
-  const t = new Date().toLocaleTimeString('en-GB');
-  const el = document.createElement('div');
-  el.className = `log-entry log-${type}`;
-  el.innerHTML = `<span class="log-time">${t}</span><span class="log-msg">${msg}</span>`;
-  logContainer.prepend(el);
-  while (logContainer.children.length > 30) logContainer.removeChild(logContainer.lastChild);
+function showAddWardLogin() {
+  const r = document.getElementById('addWardRow');
+  r.style.display = r.style.display === 'none' ? '' : 'none';
 }
 
-// ================================================================
-// RENDER — writes live{} to DOM
-// ================================================================
-function render() {
-  const now = new Date().toLocaleTimeString('en-GB');
-  document.getElementById('lastUpdate').textContent = now;
-
-  // Rate
-  const rate = live.RATE;
-  const rateEl = document.getElementById('dripRate');
-  const setVal = live.SET;
-
-  if (rate !== null && rate !== 'NOT_SET') {
-    rateEl.textContent = rate;
-    const pct = Math.min(100, (rate / 200) * 100);
-    document.getElementById('rateBar').style.width = pct + '%';
-    // colour based on deviation from set rate
-    if (setVal && setVal !== 'NOT_SET') {
-      const diff = Math.abs(rate - setVal) / setVal;
-      rateEl.className = 'metric-value ' + (diff < 0.05 ? 'col-green' : diff < 0.15 ? 'col-blue' : 'col-red');
-      document.getElementById('rateBar').style.background = diff < 0.05 ? 'var(--green)' : diff < 0.15 ? 'var(--blue)' : 'var(--red)';
-    } else {
-      rateEl.className = 'metric-value col-blue';
-    }
-    pushChartPoint(parseFloat(rate));
-  } else {
-    rateEl.textContent = '---';
-    rateEl.className = 'metric-value col-muted';
+function createWard() {
+  const name = document.getElementById('newWardName').value.trim();
+  const pin  = document.getElementById('newWardPin').value.trim();
+  if (!name || !pin || pin.length < 4) {
+    alert('Enter a ward name and at least a 4-digit PIN.'); return;
   }
+  const wards = getWards();
+  if (wards.find(w => w.name === name)) { alert('Ward already exists.'); return; }
+  wards.push({ name, pin });
+  saveWards(wards);
+  document.getElementById('newWardName').value = '';
+  document.getElementById('newWardPin').value  = '';
+  document.getElementById('addWardRow').style.display = 'none';
+  renderWardButtons();
+}
 
-  // Set rate
-  document.getElementById('setRate').textContent =
-    (setVal && setVal !== 'NOT_SET') ? setVal + ' dpm' : '--- dpm';
+function logout() {
+  LS.del('ds_session');
+  currentWard = null;
+  if (mqttClient) { mqttClient.end(); mqttClient = null; }
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginStep2').style.display = 'none';
+  document.getElementById('loginStep1').style.display = '';
+  renderWardButtons();
+}
 
-  // Time
-  const timeEl = document.getElementById('timeRemaining');
-  const t = live.TIME;
-  if (t !== null && t !== 'NOT_SET') {
-    timeEl.textContent = t;
-    const dur = 60; // assume 60 min session for bar
-    document.getElementById('timeBar').style.width = Math.min(100, (t / dur) * 100) + '%';
-  } else {
-    timeEl.textContent = '---';
+function checkSession() {
+  const sess = LS.get('ds_session');
+  if (!sess) return false;
+  if (Date.now() - sess.ts > 8 * 60 * 60 * 1000) { LS.del('ds_session'); return false; }
+  const wards = getWards();
+  const ward  = wards.find(w => w.name === sess.ward);
+  if (!ward) { LS.del('ds_session'); return false; }
+  currentWard = ward;
+  return true;
+}
+
+// ================================================================
+// APP BOOT
+// ================================================================
+function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display  = '';
+  document.getElementById('wardLabel').textContent = currentWard.name;
+  renderGrid();
+  connectMQTT();
+}
+
+// ================================================================
+// MQTT
+// ================================================================
+function connectMQTT() {
+  setConnPill('connecting', 'Connecting…');
+  const clientId = 'dripstop_dash_' + Math.random().toString(16).slice(2, 8);
+  mqttClient = mqtt.connect(MQTT_URL, {
+    clientId,
+    clean: true,
+    reconnectPeriod: 5000,
+    connectTimeout: 10000,
+  });
+  mqttClient.on('connect', () => {
+    setConnPill('connected', 'MQTT Connected');
+    mqttClient.subscribe(MQTT_TOPIC);
+  });
+  mqttClient.on('message', (topic, payload) => {
+    // Extract device ID from topic: dripstop/<ID>/telemetry
+    const parts = topic.split('/');
+    if (parts.length < 3) return;
+    const deviceId = parts[1];
+    const line = payload.toString().trim();
+    if (!line.includes('RATE=')) return;
+    handleTelemetry(deviceId, line);
+  });
+  mqttClient.on('error', () => setConnPill('error', 'MQTT Error'));
+  mqttClient.on('offline', () => setConnPill('connecting', 'Reconnecting…'));
+  mqttClient.on('reconnect', () => setConnPill('connecting', 'Reconnecting…'));
+}
+
+function setConnPill(state, text) {
+  const pill  = document.getElementById('connPill');
+  const label = document.getElementById('connLabel');
+  pill.className  = 'conn-pill pill-' + state;
+  label.textContent = text;
+}
+
+// ================================================================
+// TELEMETRY HANDLER
+// ================================================================
+function handleTelemetry(deviceId, line) {
+  if (!telemetry[deviceId]) {
+    telemetry[deviceId] = { RATE:null, SET:null, TIME:null,
+      ALARM:'NORMAL', STATUS:'IDLE', DF:'--', lastSeen:null, history:[], log:[] };
   }
+  const t = telemetry[deviceId];
+  const prev = { ALARM: t.ALARM, STATUS: t.STATUS };
 
-  // Drop factor
-  const df = document.getElementById('dropFactor');
-  df.textContent = (live.DF && live.DF !== 'NOT_SET') ? live.DF : '--';
-
-  // Status
-  const statusEl = document.getElementById('infusionStatus');
-  const statusColors = {
-    RUNNING: 'var(--green)', PAUSED: 'var(--amber)', CALIBRATING: 'var(--blue)',
-    COMPLETE: 'var(--muted)', IDLE: 'var(--muted)', '---': 'var(--muted)'
-  };
-  statusEl.textContent = live.STATUS || '---';
-  statusEl.style.color = statusColors[live.STATUS] || 'var(--muted)';
-
-  // Alarm banner
-  const banner = document.getElementById('alarmBanner');
-  const alarmText = document.getElementById('alarmText');
-  const alarmTime = document.getElementById('alarmTime');
-  alarmTime.textContent = now;
-  const alarmMap = {
-    NORMAL:      ['alarm-normal',  '✦', 'System Normal · No Active Alarms'],
-    OCCLUSION:   ['alarm-error',   '⚠', 'Occlusion Detected · Check IV Line'],
-    ERROR:       ['alarm-error',   '✖', 'Rate Error · Out of Tolerance'],
-    RECALIBRATE: ['alarm-warning', '↺', 'Recalibrating · Please Wait'],
-    COMPLETE:    ['alarm-normal',  '✔', 'Infusion Complete'],
-  };
-  const [cls, icon, txt] = alarmMap[live.ALARM] || alarmMap.NORMAL;
-  banner.className = `alarm-banner ${cls}`;
-  alarmText.textContent = `${icon}  ${txt}`;
-}
-
-// ================================================================
-// MOCK MODE
-// ================================================================
-function startMock() {
-  stopMock();
-  mockTime = 60; mockRate = 68;
-  addLog('Mock simulation started', 'normal');
-  mockTimer = setInterval(() => {
-    mockRate += (Math.random() * 6 - 3);
-    mockRate = Math.max(20, Math.min(120, mockRate));
-    mockTime = Math.max(0, mockTime - (1/60));
-    live.RATE   = Math.round(mockRate);
-    live.SET    = 70;
-    live.TIME   = Math.ceil(mockTime);
-    live.DF     = 20;
-    live.STATUS = mockTime > 0 ? 'RUNNING' : 'COMPLETE';
-    live.ALARM  = mockRate < 40 ? 'ERROR' : mockRate > 110 ? 'ERROR' : 'NORMAL';
-    render();
-  }, 1000);
-}
-function stopMock() {
-  if (mockTimer) { clearInterval(mockTimer); mockTimer = null; }
-}
-
-// ================================================================
-// WEBSOCKET (LIVE MODE)
-// ================================================================
-function connectWS() {
-  const raw = document.getElementById('wsUrl').value.trim();
-  const url = raw.startsWith('ws://') || raw.startsWith('wss://') ? raw : `ws://${raw}`;
-  setPillState('connecting', 'CONNECTING…');
-  if (ws) { ws.close(); ws = null; }
-  if (wsRetryTimer) { clearTimeout(wsRetryTimer); wsRetryTimer = null; }
-  try {
-    ws = new WebSocket(url);
-    ws.onopen = () => {
-      setPillState('connected', 'LIVE · CONNECTED');
-      addLog(`WebSocket connected → ${url}`, 'normal');
-    };
-    ws.onmessage = (e) => {
-      parsePacket(e.data.trim());
-      render();
-    };
-    ws.onerror = () => {
-      setPillState('error', 'WS ERROR');
-      addLog('WebSocket error — check ESP32 IP and port', 'error');
-    };
-    ws.onclose = () => {
-      if (mode === 'live') {
-        setPillState('error', 'DISCONNECTED');
-        addLog('WebSocket closed — retrying in 5s…', 'warn');
-        wsRetryTimer = setTimeout(connectWS, 5000);
-      }
-    };
-  } catch(e) {
-    setPillState('error', 'INVALID URL');
-    addLog('Invalid WebSocket URL', 'error');
-  }
-}
-
-function disconnectWS() {
-  if (wsRetryTimer) { clearTimeout(wsRetryTimer); wsRetryTimer = null; }
-  if (ws) { ws.close(); ws = null; }
-}
-
-// ================================================================
-// PACKET PARSER  — "RATE=66,SET=70,TIME=24,ALARM=NORMAL,STATUS=RUNNING,DF=20"
-// ================================================================
-function parsePacket(line) {
-  if (!line.includes('RATE=')) return;
-  const prev = { ...live };
   line.split(',').forEach(pair => {
-    const [k, v] = pair.split('=');
-    if (k && v !== undefined) {
-      const key = k.trim().toUpperCase();
-      const val = v.trim();
-      if (key === 'RATE' || key === 'SET' || key === 'TIME') {
-        live[key] = val === 'NOT_SET' ? null : parseInt(val, 10);
-      } else if (key === 'ALARM' || key === 'STATUS' || key === 'DF') {
-        live[key] = val;
+    const eq = pair.indexOf('=');
+    if (eq === -1) return;
+    const k = pair.slice(0, eq).trim().toUpperCase();
+    const v = pair.slice(eq + 1).trim();
+    if (k === 'RATE' || k === 'SET' || k === 'TIME') {
+      t[k] = (v === 'NOT_SET' || v === '') ? null : parseInt(v, 10);
+    } else if (k === 'ALARM' || k === 'STATUS' || k === 'DF') {
+      t[k] = v;
+    }
+  });
+  t.lastSeen = new Date();
+
+  // History for chart (keep 60 points)
+  if (t.RATE !== null) {
+    t.history.push({ ts: Date.now(), v: t.RATE });
+    if (t.history.length > 60) t.history.shift();
+  }
+
+  // Log transitions
+  const now = new Date().toLocaleTimeString();
+  if (prev.ALARM !== t.ALARM) {
+    t.log.unshift({ time: now, msg: 'Alarm → ' + t.ALARM,
+      type: t.ALARM === 'NORMAL' ? 'ok' : 'error' });
+  }
+  if (prev.STATUS !== t.STATUS) {
+    t.log.unshift({ time: now, msg: 'Status → ' + t.STATUS, type: 'ok' });
+  }
+  if (t.log.length > 40) t.log.pop();
+
+  // Update card
+  updateDeviceCard(deviceId);
+  updateSummaryBar();
+
+  // Update detail modal if open for this device
+  if (detailDeviceId === deviceId) renderDetailModal(deviceId);
+}
+
+// ================================================================
+// DEVICE GRID
+// ================================================================
+function getWardDevices() {
+  const all = getDevices();
+  return currentWard ? all.filter(d => d.ward === currentWard.name) : all;
+}
+
+function renderGrid() {
+  const devices = getWardDevices();
+  document.getElementById('deviceCount').textContent = devices.length;
+  const grid = document.getElementById('deviceGrid');
+  if (!devices.length) {
+    grid.innerHTML = `<div class="empty-state">
+      <b>No devices in ${currentWard ? currentWard.name : 'this ward'}</b>
+      Click "+ Add Device" to register an ESP32 and assign a patient.
+    </div>`;
+    updateSummaryBar();
+    return;
+  }
+  grid.innerHTML = devices.map(d => deviceCardHTML(d)).join('');
+  devices.forEach(d => updateDeviceCard(d.id));
+  updateSummaryBar();
+}
+
+function deviceCardHTML(device) {
+  return `<div class="device-card" id="card_${device.id}"
+    onclick="openDetail('${device.id}')">
+    <div class="card-header">
+      <div>
+        <div class="card-patient">${device.patient}</div>
+        <div class="card-device">${device.id} · ${device.bed || '—'}</div>
+      </div>
+      <span class="alarm-badge badge-offline" id="badge_${device.id}">OFFLINE</span>
+    </div>
+    <div class="card-metrics">
+      <div class="metric-box">
+        <div class="metric-val" id="mRate_${device.id}" style="color:var(--muted)">---</div>
+        <div class="metric-lbl">Rate dpm</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-val" id="mSet_${device.id}" style="color:var(--muted)">---</div>
+        <div class="metric-lbl">Set dpm</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-val" id="mTime_${device.id}" style="color:var(--muted)">---</div>
+        <div class="metric-lbl">Min left</div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span>
+        <span class="status-dot" id="sDot_${device.id}" style="background:var(--muted)"></span>
+        <span id="sText_${device.id}">Waiting for data…</span>
+      </span>
+      <span id="sTime_${device.id}" style="font-size:10px;">—</span>
+    </div>
+    <div class="offline-overlay" id="overlay_${device.id}">No signal</div>
+  </div>`;
+}
+
+function updateDeviceCard(deviceId) {
+  const t = telemetry[deviceId];
+  if (!t) return;
+
+  const isOffline = !t.lastSeen ||
+    (Date.now() - t.lastSeen.getTime()) > 15000;
+
+  // Overlay
+  const overlay = document.getElementById('overlay_' + deviceId);
+  if (overlay) overlay.style.display = isOffline ? 'flex' : 'none';
+
+  // Badge
+  const badge = document.getElementById('badge_' + deviceId);
+  if (badge) {
+    if (isOffline) { badge.className = 'alarm-badge badge-offline'; badge.textContent = 'OFFLINE'; }
+    else {
+      const bmap = {
+        NORMAL:'badge-normal', OCCLUSION:'badge-error',
+        ERROR:'badge-error', RECALIBRATE:'badge-warn',
+        COMPLETE:'badge-normal'
+      };
+      badge.className = 'alarm-badge ' + (bmap[t.ALARM] || 'badge-normal');
+      badge.textContent = t.ALARM;
+    }
+  }
+
+  // Card border
+  const card = document.getElementById('card_' + deviceId);
+  if (card) {
+    card.className = 'device-card' +
+      (t.ALARM !== 'NORMAL' && !isOffline ? ' alarm-active' :
+       t.STATUS === 'RUNNING' && !isOffline ? ' status-ok' : '');
+  }
+
+  // Metrics
+  const set = (id, val, col) => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = val; if (col) el.style.color = col; }
+  };
+
+  const rCol = t.RATE !== null && t.SET !== null
+    ? (Math.abs(t.RATE - t.SET) / t.SET < 0.05 ? 'var(--green)'
+      : Math.abs(t.RATE - t.SET) / t.SET < 0.15 ? 'var(--blue)' : 'var(--red)')
+    : 'var(--muted)';
+
+  set('mRate_' + deviceId, t.RATE !== null ? t.RATE : '---', rCol);
+  set('mSet_'  + deviceId, t.SET  !== null ? t.SET  : '---', 'var(--blue)');
+  set('mTime_' + deviceId, t.TIME !== null ? t.TIME : '---',
+    t.TIME !== null && t.TIME < 10 ? 'var(--red)' : 'var(--green)');
+
+  // Status dot + text
+  const statusColors = {
+    RUNNING:'var(--green)', PAUSED:'var(--yellow)',
+    CALIBRATING:'var(--blue)', COMPLETE:'var(--muted)', IDLE:'var(--muted)'
+  };
+  const dot = document.getElementById('sDot_'  + deviceId);
+  const stx = document.getElementById('sText_' + deviceId);
+  if (dot) dot.style.background = isOffline ? 'var(--muted)' : (statusColors[t.STATUS] || 'var(--muted)');
+  if (stx) stx.textContent = isOffline ? 'No signal' : (t.STATUS || 'IDLE');
+
+  // Last seen
+  const stm = document.getElementById('sTime_' + deviceId);
+  if (stm && t.lastSeen) stm.textContent = t.lastSeen.toLocaleTimeString();
+}
+
+// Periodically refresh cards to show OFFLINE state
+setInterval(() => {
+  const devices = getWardDevices();
+  devices.forEach(d => updateDeviceCard(d.id));
+  updateSummaryBar();
+}, 5000);
+
+// ================================================================
+// SUMMARY BAR
+// ================================================================
+function updateSummaryBar() {
+  const devices = getWardDevices();
+  let running = 0, alarm = 0, offline = 0;
+  devices.forEach(d => {
+    const t = telemetry[d.id];
+    if (!t || !t.lastSeen || Date.now() - t.lastSeen.getTime() > 15000) { offline++; return; }
+    if (t.STATUS === 'RUNNING' || t.STATUS === 'CALIBRATING') running++;
+    if (t.ALARM && t.ALARM !== 'NORMAL') alarm++;
+  });
+  const bar = document.getElementById('summaryBar');
+  bar.innerHTML = `
+    <div class="sum-chip"><span class="sum-dot" style="background:var(--green)"></span>${running} Active</div>
+    <div class="sum-chip"><span class="sum-dot" style="background:var(--red)"></span>${alarm} Alarm${alarm !== 1 ? 's' : ''}</div>
+    <div class="sum-chip"><span class="sum-dot" style="background:var(--muted)"></span>${offline} Offline</div>
+    <div class="sum-chip"><span class="sum-dot" style="background:var(--blue)"></span>${devices.length} Total</div>
+  `;
+}
+
+// ================================================================
+// DETAIL MODAL
+// ================================================================
+function openDetail(deviceId) {
+  detailDeviceId = deviceId;
+  const devices  = getDevices();
+  const device   = devices.find(d => d.id === deviceId);
+  if (!device) return;
+
+  document.getElementById('detailPatient').textContent = device.patient;
+  document.getElementById('detailMeta').textContent =
+    deviceId + '  ·  ' + (device.bed || '—') + '  ·  ' + device.ward;
+
+  // Build detail chart
+  if (detailChartObj) { detailChartObj.destroy(); detailChartObj = null; }
+  const dc = document.getElementById('detailChart').getContext('2d');
+  detailChartObj = new Chart(dc, {
+    type: 'line',
+    data: { labels: [], datasets: [{
+      data: [], borderColor: '#2f88a8',
+      backgroundColor: 'rgba(47,136,168,0.1)',
+      tension: 0.35, fill: true, borderWidth: 2,
+      pointRadius: 0,
+    }]},
+    options: {
+      responsive: true, animation: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { display: false },
+        y: { min: 0, grid: { color: 'rgba(0,0,0,0.04)' },
+             ticks: { color: '#70818a', font: { size: 10 }, maxTicksLimit: 4 } }
       }
     }
   });
-  // Log state transitions
-  if (prev.ALARM !== live.ALARM) {
-    const type = live.ALARM === 'NORMAL' ? 'normal' : live.ALARM === 'COMPLETE' ? 'normal' : 'error';
-    addLog(`Alarm state → ${live.ALARM}`, type);
+
+  renderDetailModal(deviceId);
+  document.getElementById('detailModal').classList.add('open');
+}
+
+function renderDetailModal(deviceId) {
+  const t = telemetry[deviceId];
+  if (!t) return;
+
+  const set = (id, val, col) => {
+    const el = document.getElementById(id);
+    if (!el) return; el.textContent = val; if (col) el.style.color = col;
+  };
+
+  const rCol = t.RATE !== null && t.SET !== null
+    ? (Math.abs(t.RATE - t.SET) / t.SET < 0.05 ? 'var(--green)'
+      : Math.abs(t.RATE - t.SET) / t.SET < 0.15 ? 'var(--blue)' : 'var(--red)')
+    : 'var(--blue)';
+
+  set('dRate',  t.RATE !== null ? t.RATE : '---', rCol);
+  set('dSet',   t.SET  !== null ? t.SET  : '---', 'var(--blue)');
+  set('dTime',  t.TIME !== null ? t.TIME : '---',
+    t.TIME !== null && t.TIME < 10 ? 'var(--red)' : 'var(--green)');
+
+  const statusColors = { RUNNING:'var(--green)', PAUSED:'var(--yellow)',
+    CALIBRATING:'var(--blue)', COMPLETE:'var(--muted)', IDLE:'var(--muted)' };
+  set('dStatus', t.STATUS || '---', statusColors[t.STATUS] || 'var(--muted)');
+
+  const alarmColors = { NORMAL:'var(--green)', OCCLUSION:'var(--red)',
+    ERROR:'var(--red)', RECALIBRATE:'var(--blue)', COMPLETE:'var(--green)' };
+  set('dAlarm', t.ALARM || 'NORMAL', alarmColors[t.ALARM] || 'var(--muted)');
+  set('dDF', t.DF && t.DF !== 'NOT_SET' ? t.DF : '--', null);
+  set('dLastSeen', t.lastSeen ? t.lastSeen.toLocaleTimeString() : '---', null);
+
+  // Chart
+  if (detailChartObj && t.history.length) {
+    detailChartObj.data.labels   = t.history.map(() => '');
+    detailChartObj.data.datasets[0].data = t.history.map(p => p.v);
+    detailChartObj.update('none');
   }
-  if (prev.STATUS !== live.STATUS) {
-    addLog(`Status → ${live.STATUS}`, 'normal');
+
+  // Log
+  const logEl = document.getElementById('detailLog');
+  if (logEl) {
+    if (!t.log.length) {
+      logEl.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:8px;">No events yet.</div>';
+    } else {
+      logEl.innerHTML = t.log.slice(0, 20).map(e =>
+        `<div class="log-item log-${e.type || ''}">
+          <div class="time">${e.time}</div>${e.msg}
+        </div>`).join('');
+    }
   }
 }
 
-// ================================================================
-// MODE SWITCHING
-// ================================================================
-function setMode(m) {
-  mode = m;
-  const btnMock = document.getElementById('btnMock');
-  const btnLive = document.getElementById('btnLive');
-  const wsConfig = document.getElementById('wsConfig');
-  const rateTag  = document.getElementById('rateTag');
-  const timeTag  = document.getElementById('timeTag');
+function editCurrentDevice() {
+  closeModal('detailModal');
+  openAddDevice(detailDeviceId);
+}
 
-  if (m === 'mock') {
-    btnMock.className = 'mode-btn active-mock';
-    btnLive.className = 'mode-btn';
-    wsConfig.classList.remove('visible');
-    setPillState('mock', 'MOCK MODE');
-    rateTag.className = 'tag tag-mock'; rateTag.textContent = 'MOCK';
-    timeTag.className = 'tag tag-mock'; timeTag.textContent = 'MOCK';
-    disconnectWS();
-    startMock();
-    addLog('Switched to mock simulation', 'warn');
+// ================================================================
+// ADD / EDIT DEVICE MODAL
+// ================================================================
+function openAddDevice(editId) {
+  editingDeviceId = editId || null;
+  document.getElementById('addDeviceTitle').textContent = editId ? 'Edit Device' : 'Add Device';
+  document.getElementById('deleteDevBtn').style.display = editId ? '' : 'none';
+  document.getElementById('fDeviceIdErr').textContent   = '';
+  document.getElementById('fPatientNameErr').textContent = '';
+
+  // Populate ward select
+  const sel = document.getElementById('fWard');
+  sel.innerHTML = getWards().map(w =>
+    `<option value="${w.name}">${w.name}</option>`).join('');
+
+  if (editId) {
+    const dev = getDevices().find(d => d.id === editId);
+    if (dev) {
+      document.getElementById('fDeviceId').value    = dev.id;
+      document.getElementById('fPatientName').value = dev.patient;
+      document.getElementById('fBed').value         = dev.bed || '';
+      document.getElementById('fWard').value        = dev.ward;
+      document.getElementById('fDeviceId').disabled = true;
+    }
   } else {
-    btnMock.className = 'mode-btn';
-    btnLive.className = 'mode-btn active-live';
-    wsConfig.classList.add('visible');
-    setPillState('connecting', 'CONNECTING…');
-    rateTag.className = 'tag tag-live'; rateTag.textContent = 'LIVE';
-    timeTag.className = 'tag tag-live'; timeTag.textContent = 'LIVE';
-    stopMock();
-    // Reset display while connecting
-    live.RATE = null; live.SET = null; live.TIME = null;
-    live.STATUS = '---'; live.ALARM = 'NORMAL';
-    render();
-    addLog('Switched to live mode — connecting…', 'normal');
-    connectWS();
+    document.getElementById('fDeviceId').value    = '';
+    document.getElementById('fPatientName').value = '';
+    document.getElementById('fBed').value         = '';
+    document.getElementById('fDeviceId').disabled = false;
+    if (currentWard) document.getElementById('fWard').value = currentWard.name;
   }
+  document.getElementById('addDeviceModal').classList.add('open');
 }
 
-function setPillState(state, text) {
-  const pill = document.getElementById('statusPill');
-  const pillText = document.getElementById('pillText');
-  pill.className = 'status-pill pill-' + (
-    state === 'mock'        ? 'mock' :
-    state === 'connected'   ? 'connected' :
-    state === 'connecting'  ? 'connecting' : 'error'
-  );
-  pillText.textContent = text;
+function saveDevice() {
+  const id      = document.getElementById('fDeviceId').value.trim().toUpperCase().replace(/\s+/g,'_');
+  const patient = document.getElementById('fPatientName').value.trim();
+  const bed     = document.getElementById('fBed').value.trim();
+  const ward    = document.getElementById('fWard').value;
+  let ok = true;
+
+  if (!id) { document.getElementById('fDeviceIdErr').textContent = 'Device ID is required.'; ok = false; }
+  else document.getElementById('fDeviceIdErr').textContent = '';
+  if (!patient) { document.getElementById('fPatientNameErr').textContent = 'Patient name is required.'; ok = false; }
+  else document.getElementById('fPatientNameErr').textContent = '';
+  if (!ok) return;
+
+  let devices = getDevices();
+  if (editingDeviceId) {
+    devices = devices.map(d => d.id === editingDeviceId ? { ...d, patient, bed, ward } : d);
+  } else {
+    if (devices.find(d => d.id === id)) {
+      document.getElementById('fDeviceIdErr').textContent = 'Device ID already exists.'; return;
+    }
+    devices.push({ id, patient, bed, ward });
+  }
+  saveDevices(devices);
+  closeModal('addDeviceModal');
+  renderGrid();
 }
+
+function deleteDevice() {
+  if (!editingDeviceId) return;
+  if (!confirm('Remove device ' + editingDeviceId + '? This cannot be undone.')) return;
+  let devices = getDevices().filter(d => d.id !== editingDeviceId);
+  saveDevices(devices);
+  delete telemetry[editingDeviceId];
+  closeModal('addDeviceModal');
+  renderGrid();
+}
+
+// ================================================================
+// WARD SETUP MODAL
+// ================================================================
+function openWardSetup() {
+  renderWardMgmt();
+  document.getElementById('wardSetupModal').classList.add('open');
+}
+
+function renderWardMgmt() {
+  const wards = getWards();
+  document.getElementById('wardMgmtList').innerHTML = wards.length
+    ? wards.map(w => `
+        <div class="ward-item">
+          <span>🏥 ${w.name}</span>
+          <button class="ward-item-del" onclick="deleteWard('${w.name}')">✕</button>
+        </div>`).join('')
+    : '<p style="font-size:13px;color:var(--muted);">No wards yet.</p>';
+}
+
+function addWardFromSetup() {
+  const name = document.getElementById('wsWardName').value.trim();
+  const pin  = document.getElementById('wsWardPin').value.trim();
+  if (!name || pin.length < 4) { alert('Enter a name and at least a 4-digit PIN.'); return; }
+  const wards = getWards();
+  if (wards.find(w => w.name === name)) { alert('Ward already exists.'); return; }
+  wards.push({ name, pin });
+  saveWards(wards);
+  document.getElementById('wsWardName').value = '';
+  document.getElementById('wsWardPin').value  = '';
+  renderWardMgmt();
+}
+
+function deleteWard(name) {
+  if (!confirm('Delete ward "' + name + '"? All devices assigned to it will remain but lose ward association.')) return;
+  saveWards(getWards().filter(w => w.name !== name));
+  renderWardMgmt();
+}
+
+// ================================================================
+// MODAL HELPERS
+// ================================================================
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  if (id === 'detailModal') detailDeviceId = null;
+  if (id === 'addDeviceModal') {
+    editingDeviceId = null;
+    document.getElementById('fDeviceId').disabled = false;
+  }
+}
+// Close on backdrop click
+document.querySelectorAll('.modal-bg').forEach(bg =>
+  bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); })
+);
 
 // ================================================================
 // BOOT
 // ================================================================
-addLog('DripStop dashboard loaded', 'normal');
-addLog('Mock mode active — press Live to connect', 'warn');
-startMock();
+renderWardButtons();
+if (checkSession()) {
+  showApp();
+} else {
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+// Seed default ward on very first visit
+if (!getWards().length) {
+  saveWards([{ name: 'ICU-A', pin: '1234' }, { name: 'Ward-B', pin: '5678' }]);
+  renderWardButtons();
+}
 </script>
 </body>
 </html>
