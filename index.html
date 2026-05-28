@@ -462,7 +462,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 // Each ESP32 publishes to: dripstop/<DEVICE_ID>/telemetry
 // Dashboard subscribes to: dripstop/+/telemetry  (wildcard)
 // ================================================================
-const MQTT_URL    = 'wss://broker.hivemq.com:8884/mqtt';
+const MQTT_URL    = 'wss://broker.emqx.io:8084/mqtt';
 const MQTT_TOPIC  = 'dripstop/+/telemetry';
 const TOPIC_PFX   = 'dripstop/';
 const TOPIC_SFX   = '/telemetry';
