@@ -1,353 +1,511 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DripStop IV Monitor</title>
+
+<title>DripStop Dashboard</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
 <style>
 
 :root{
-  --bg:#0f1923;
-  --card:#162030;
-  --card2:#1c2a3a;
-  --blue:#3b9fd4;
-  --green:#22c97a;
-  --red:#f05252;
-  --yellow:#f5a623;
-  --text:#f0f4f8;
-  --muted:#7a90a4;
-  --border:#243044;
-  --radius:20px;
+
+  --bg:#f4f8fc;
+  --card:#ffffff;
+  --blue:#2196f3;
+  --blue2:#64b5ff;
+  --green:#20c777;
+  --red:#ef5350;
+  --yellow:#ffb300;
+
+  --text:#1a2433;
+  --muted:#6f8093;
+  --border:#d8e2ee;
+
+  --radius:22px;
 }
 
 *{
-  box-sizing:border-box;
   margin:0;
   padding:0;
+  box-sizing:border-box;
 }
 
 body{
+
   font-family:'Inter',sans-serif;
   background:var(--bg);
   color:var(--text);
   min-height:100vh;
 }
 
-/* TOP BAR */
+
+/* ===================================================== */
+/* TOPBAR */
+/* ===================================================== */
 
 .topbar{
+
+  height:74px;
+
+  background:#fff;
+
+  border-bottom:1px solid var(--border);
+
   display:flex;
   align-items:center;
   justify-content:space-between;
+
   padding:0 28px;
-  height:64px;
-  background:var(--card);
-  border-bottom:1px solid var(--border);
 }
 
 .brand{
-  font-size:20px;
-  font-weight:800;
+
+  font-size:26px;
+  font-weight:900;
+  letter-spacing:-1px;
+
+  color:#fff;
+
+  background:linear-gradient(90deg,var(--blue),var(--blue2));
+
+  padding:8px 18px;
+
+  border-radius:16px;
+
+  box-shadow:0 8px 24px rgba(33,150,243,0.22);
 }
 
 .brand span{
-  color:var(--blue);
+
+  color:#ffffff;
 }
 
-.conn-pill{
+
+/* ===================================================== */
+/* MODE TOGGLE */
+/* ===================================================== */
+
+.mode-wrap{
+
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.mode-toggle{
+
+  display:flex;
+
+  background:#edf4fb;
+
+  border-radius:999px;
+
+  padding:4px;
+
+  border:1px solid var(--border);
+}
+
+.mode-btn{
+
+  border:none;
+
+  padding:8px 16px;
+
+  border-radius:999px;
+
+  cursor:pointer;
+
+  font-weight:700;
+
+  font-size:12px;
+
+  background:transparent;
+
+  color:var(--muted);
+
+  transition:0.2s;
+}
+
+.mode-btn.active{
+
+  background:var(--blue);
+
+  color:#fff;
+
+  box-shadow:0 4px 14px rgba(33,150,243,0.3);
+}
+
+
+/* ===================================================== */
+/* CONNECTION */
+/* ===================================================== */
+
+.conn{
+
   display:flex;
   align-items:center;
   gap:8px;
-  padding:7px 14px;
-  border-radius:20px;
-  background:var(--card2);
+
+  padding:10px 16px;
+
+  border-radius:999px;
+
+  background:#fff;
+
   border:1px solid var(--border);
+
   font-size:12px;
   font-weight:700;
 }
 
-.conn-dot{
+.dot{
+
   width:8px;
   height:8px;
   border-radius:50%;
 }
 
-.pill-ok{
+.ok{
+
   color:var(--green);
 }
 
-.pill-ok .conn-dot{
+.ok .dot{
+
   background:var(--green);
 }
 
-.pill-err{
+.err{
+
   color:var(--red);
 }
 
-.pill-err .conn-dot{
+.err .dot{
+
   background:var(--red);
 }
 
+
+/* ===================================================== */
 /* SUMMARY */
+/* ===================================================== */
 
 .summary{
+
   display:flex;
-  gap:12px;
-  padding:20px 28px;
-  flex-wrap:wrap;
+  gap:14px;
+
+  padding:24px 28px;
 }
 
 .sum-card{
-  background:var(--card);
+
+  background:#fff;
+
   border:1px solid var(--border);
-  border-radius:14px;
-  padding:14px 20px;
-  display:flex;
-  align-items:center;
-  gap:12px;
+
+  border-radius:18px;
+
+  padding:18px 22px;
+
+  min-width:140px;
+
+  box-shadow:0 4px 14px rgba(0,0,0,0.03);
 }
 
 .sum-val{
+
+  font-size:30px;
+  font-weight:900;
+}
+
+.sum-lbl{
+
+  margin-top:4px;
+
+  font-size:11px;
+
+  color:var(--muted);
+
+  font-weight:700;
+}
+
+
+/* ===================================================== */
+/* DEVICE CARD */
+/* ===================================================== */
+
+.wrap{
+
+  padding:0 28px 40px;
+}
+
+.card{
+
+  background:#fff;
+
+  border-radius:28px;
+
+  border:2px solid #e3edf8;
+
+  padding:28px;
+
+  box-shadow:0 10px 30px rgba(0,0,0,0.05);
+
+  max-width:520px;
+}
+
+.card.running{
+
+  border-color:#a5e7c5;
+}
+
+.card-head{
+
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+
+  margin-bottom:24px;
+}
+
+.title{
+
   font-size:24px;
   font-weight:800;
 }
 
-.sum-lbl{
-  font-size:11px;
+.sub{
+
+  margin-top:5px;
+
+  font-size:12px;
+
   color:var(--muted);
-}
-
-/* GRID */
-
-.grid-wrap{
-  padding:0 28px 40px;
-}
-
-.device-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
-  gap:18px;
-}
-
-/* DEVICE CARD */
-
-.device-card{
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  padding:24px;
-}
-
-.card-running{
-  border-color:#1a5c3a;
-}
-
-.card-alarm{
-  border-color:var(--red);
-}
-
-.card-head{
-  display:flex;
-  justify-content:space-between;
-  margin-bottom:20px;
-}
-
-.card-name{
-  font-size:18px;
-  font-weight:700;
-}
-
-.card-id{
-  font-size:11px;
-  color:var(--muted);
-  margin-top:4px;
 }
 
 .badge{
-  padding:5px 10px;
-  border-radius:20px;
-  font-size:10px;
+
+  padding:8px 14px;
+
+  border-radius:999px;
+
+  font-size:11px;
   font-weight:800;
 }
 
-.badge-ok{
-  background:#0d3326;
+.badge.running{
+
+  background:#e7fff3;
   color:var(--green);
 }
 
-.badge-err{
-  background:#3d1515;
-  color:var(--red);
+.badge.paused{
+
+  background:#fff4d9;
+  color:var(--yellow);
 }
 
-.badge-off{
-  background:#1a2535;
+.badge.offline{
+
+  background:#f2f4f8;
   color:var(--muted);
 }
 
-/* METRICS */
 
-.card-metrics{
+/* ===================================================== */
+/* BIG METRICS */
+/* ===================================================== */
+
+.metrics{
+
   display:grid;
+
   grid-template-columns:1fr 1fr;
-  gap:12px;
-  margin-bottom:14px;
+
+  gap:16px;
+
+  margin-bottom:18px;
 }
 
-.metric-box{
-  background:var(--card2);
-  border-radius:14px;
-  padding:16px;
+.metric{
+
+  background:#f5f9fe;
+
+  border-radius:20px;
+
+  padding:20px;
+
   text-align:center;
 }
 
 .metric-val{
-  font-size:44px;
+
+  font-size:54px;
+
   font-weight:900;
+
+  letter-spacing:-2px;
 }
 
 .metric-lbl{
+
   margin-top:6px;
-  font-size:10px;
+
+  font-size:11px;
+
   color:var(--muted);
+
+  font-weight:700;
 }
 
-.card-metrics-row{
+
+/* ===================================================== */
+/* SMALL METRICS */
+/* ===================================================== */
+
+.small{
+
   display:grid;
+
   grid-template-columns:1fr 1fr 1fr;
-  gap:8px;
+
+  gap:10px;
 }
 
-.metric-sm{
-  background:var(--card2);
-  border-radius:10px;
-  padding:10px;
+.small-box{
+
+  background:#f5f9fe;
+
+  border-radius:16px;
+
+  padding:14px;
+
   text-align:center;
 }
 
-.metric-sm-val{
-  font-size:20px;
+.small-val{
+
+  font-size:22px;
+
   font-weight:800;
 }
 
-.metric-sm-lbl{
-  font-size:9px;
-  color:var(--muted);
+.small-lbl{
+
   margin-top:4px;
+
+  font-size:10px;
+
+  color:var(--muted);
+
+  font-weight:700;
 }
 
-.card-foot{
-  margin-top:16px;
-  padding-top:12px;
-  border-top:1px solid var(--border);
+
+/* ===================================================== */
+/* FOOT */
+/* ===================================================== */
+
+.foot{
+
+  margin-top:22px;
+
+  padding-top:16px;
+
+  border-top:1px solid #edf2f8;
+
   display:flex;
   justify-content:space-between;
-  font-size:11px;
+
   color:var(--muted);
+
+  font-size:12px;
+}
+
+
+/* ===================================================== */
+/* IP BOX */
+/* ===================================================== */
+
+.ipbox{
+
+  margin-bottom:18px;
+}
+
+.ipbox input{
+
+  width:100%;
+
+  padding:14px 16px;
+
+  border-radius:16px;
+
+  border:1px solid var(--border);
+
+  outline:none;
+
+  font-family:'Inter',sans-serif;
 }
 
 @media(max-width:700px){
-  .summary,
-  .grid-wrap{
-    padding-left:16px;
-    padding-right:16px;
+
+  .summary{
+    flex-wrap:wrap;
   }
 
-  .device-grid{
+  .metrics{
+    grid-template-columns:1fr;
+  }
+
+  .small{
     grid-template-columns:1fr;
   }
 }
 
 </style>
+
 </head>
 
 <body>
 
+
+<!-- ===================================================== -->
 <!-- TOPBAR -->
+<!-- ===================================================== -->
 
 <div class="topbar">
 
   <div class="brand">
-    Drip<span>Stop</span> IV Monitor
+    Drip<span>Stop</span>
   </div>
 
-  <div class="conn-pill pill-err" id="connPill">
-    <span class="conn-dot"></span>
-    <span id="connText">Connecting...</span>
-  </div>
+  <div class="mode-wrap">
 
-</div>
+    <div class="mode-toggle">
 
-<!-- SUMMARY -->
+      <button class="mode-btn active" id="liveBtn">
+        LIVE
+      </button>
 
-<div class="summary" id="summary"></div>
+      <button class="mode-btn" id="mockBtn">
+        MOCK
+      </button>
 
-<!-- GRID -->
+    </div>
 
-<div class="grid-wrap">
+    <div class="conn err" id="conn">
 
-  <div class="device-grid" id="grid">
+      <div class="dot"></div>
 
-    <div class="device-card" id="card_DEVICE_01">
-
-      <div class="card-head">
-
-        <div>
-          <div class="card-name">Patient Monitor</div>
-          <div class="card-id">DEVICE_01 · Bed 1</div>
-        </div>
-
-        <span class="badge badge-off" id="badge">
-          OFFLINE
-        </span>
-
-      </div>
-
-      <div class="card-metrics">
-
-        <div class="metric-box">
-          <div class="metric-val" id="rateVal">---</div>
-          <div class="metric-lbl">Rate</div>
-        </div>
-
-        <div class="metric-box">
-          <div class="metric-val" id="timeVal">---</div>
-          <div class="metric-lbl">Time Left</div>
-        </div>
-
-      </div>
-
-      <div class="card-metrics-row">
-
-        <div class="metric-sm">
-          <div class="metric-sm-val" id="setVal">---</div>
-          <div class="metric-sm-lbl">Set</div>
-        </div>
-
-        <div class="metric-sm">
-          <div class="metric-sm-val" id="dfVal">--</div>
-          <div class="metric-sm-lbl">DF</div>
-        </div>
-
-        <div class="metric-sm">
-          <div class="metric-sm-val" id="statusVal">---</div>
-          <div class="metric-sm-lbl">Status</div>
-        </div>
-
-      </div>
-
-      <div class="card-foot">
-
-        <span id="footerStatus">
-          No Signal
-        </span>
-
-        <span id="footerTime"></span>
-
-      </div>
+      <span id="connText">
+        OFFLINE
+      </span>
 
     </div>
 
@@ -355,152 +513,291 @@ body{
 
 </div>
 
+
+<!-- ===================================================== -->
+<!-- SUMMARY -->
+<!-- ===================================================== -->
+
+<div class="summary">
+
+  <div class="sum-card">
+    <div class="sum-val" id="sumActive">0</div>
+    <div class="sum-lbl">ACTIVE</div>
+  </div>
+
+  <div class="sum-card">
+    <div class="sum-val" id="sumAlarm">0</div>
+    <div class="sum-lbl">ALARMS</div>
+  </div>
+
+  <div class="sum-card">
+    <div class="sum-val">1</div>
+    <div class="sum-lbl">TOTAL DEVICES</div>
+  </div>
+
+</div>
+
+
+<!-- ===================================================== -->
+<!-- CARD -->
+<!-- ===================================================== -->
+
+<div class="wrap">
+
+  <div class="card" id="card">
+
+    <div class="ipbox">
+
+      <input
+        type="text"
+        id="ipInput"
+        placeholder="Enter ESP32 IP (example: 192.168.0.205)"
+      >
+
+    </div>
+
+    <div class="card-head">
+
+      <div>
+
+        <div class="title">
+          Infusion Monitor
+        </div>
+
+        <div class="sub">
+          DEVICE_01 · Bed 1
+        </div>
+
+      </div>
+
+      <div class="badge offline" id="badge">
+        OFFLINE
+      </div>
+
+    </div>
+
+
+    <div class="metrics">
+
+      <div class="metric">
+
+        <div class="metric-val" id="rate">
+          ---
+        </div>
+
+        <div class="metric-lbl">
+          RATE
+        </div>
+
+      </div>
+
+      <div class="metric">
+
+        <div class="metric-val" id="time">
+          ---
+        </div>
+
+        <div class="metric-lbl">
+          TIME LEFT
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="small">
+
+      <div class="small-box">
+
+        <div class="small-val" id="set">
+          ---
+        </div>
+
+        <div class="small-lbl">
+          SET RATE
+        </div>
+
+      </div>
+
+      <div class="small-box">
+
+        <div class="small-val" id="df">
+          ---
+        </div>
+
+        <div class="small-lbl">
+          DROP FACTOR
+        </div>
+
+      </div>
+
+      <div class="small-box">
+
+        <div class="small-val" id="status">
+          ---
+        </div>
+
+        <div class="small-lbl">
+          STATUS
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="foot">
+
+      <span id="footerStatus">
+        Waiting...
+      </span>
+
+      <span id="footerTime">
+        --
+      </span>
+
+    </div>
+
+  </div>
+
+</div>
+
+
 <script>
 
-// ======================================================
+
+// =====================================================
+// STATE
+// =====================================================
+
+let mode = "live";
+
+let mockTimer = null;
+
+
+// =====================================================
+// MODE BUTTONS
+// =====================================================
+
+const liveBtn = document.getElementById('liveBtn');
+const mockBtn = document.getElementById('mockBtn');
+
+liveBtn.onclick = () => {
+
+  mode = "live";
+
+  liveBtn.classList.add('active');
+  mockBtn.classList.remove('active');
+
+  stopMock();
+};
+
+mockBtn.onclick = () => {
+
+  mode = "mock";
+
+  mockBtn.classList.add('active');
+  liveBtn.classList.remove('active');
+
+  startMock();
+};
+
+
+// =====================================================
 // CONNECTION UI
-// ======================================================
+// =====================================================
 
 function setConn(ok){
 
-  const pill = document.getElementById('connPill');
+  const conn = document.getElementById('conn');
+
   const text = document.getElementById('connText');
 
   if(ok){
 
-    pill.className = 'conn-pill pill-ok';
-    text.textContent = 'Live · Connected';
+    conn.className = 'conn ok';
+
+    text.innerText = 'LIVE';
 
   }else{
 
-    pill.className = 'conn-pill pill-err';
-    text.textContent = 'ESP32 Offline';
+    conn.className = 'conn err';
+
+    text.innerText = 'OFFLINE';
   }
 }
 
 
-// ======================================================
-// RENDER SUMMARY
-// ======================================================
+// =====================================================
+// UPDATE UI
+// =====================================================
 
-function renderSummary(status){
+function updateUI(data){
 
-  let running = 0;
-  let alarms = 0;
-  let offline = 0;
+  document.getElementById('rate').innerText = data.RATE;
+  document.getElementById('time').innerText = data.TIME;
 
-  if(status === 'RUNNING') running = 1;
-  else if(status === 'OFFLINE') offline = 1;
+  document.getElementById('set').innerText = data.SET;
+  document.getElementById('df').innerText = data.DF;
 
-  document.getElementById('summary').innerHTML = `
+  document.getElementById('status').innerText = data.STATUS;
 
-    <div class="sum-card">
-      <div>
-        <div class="sum-val" style="color:var(--green)">
-          ${running}
-        </div>
-        <div class="sum-lbl">ACTIVE</div>
-      </div>
-    </div>
+  document.getElementById('footerStatus').innerText =
+    data.STATUS;
 
-    <div class="sum-card">
-      <div>
-        <div class="sum-val" style="color:${alarms ? 'var(--red)' : 'var(--muted)'}">
-          ${alarms}
-        </div>
-        <div class="sum-lbl">ALARMS</div>
-      </div>
-    </div>
+  document.getElementById('footerTime').innerText =
+    new Date().toLocaleTimeString();
 
-    <div class="sum-card">
-      <div>
-        <div class="sum-val" style="color:var(--muted)">
-          ${offline}
-        </div>
-        <div class="sum-lbl">OFFLINE</div>
-      </div>
-    </div>
+  const badge = document.getElementById('badge');
 
-    <div class="sum-card">
-      <div>
-        <div class="sum-val">
-          1
-        </div>
-        <div class="sum-lbl">TOTAL</div>
-      </div>
-    </div>
+  const card = document.getElementById('card');
 
-  `;
+  if(data.STATUS === 'RUNNING'){
+
+    badge.className = 'badge running';
+
+    badge.innerText = 'RUNNING';
+
+    card.className = 'card running';
+
+    document.getElementById('sumActive').innerText = '1';
+
+  }else{
+
+    badge.className = 'badge paused';
+
+    badge.innerText = data.STATUS;
+
+    card.className = 'card';
+
+    document.getElementById('sumActive').innerText = '0';
+  }
 }
 
 
-// ======================================================
-// TELEMETRY FETCH
-// ======================================================
-
-const ESP32_IP = window.location.hostname;
-
+// =====================================================
+// LIVE FETCH
+// =====================================================
 
 async function fetchTelemetry(){
 
+  if(mode !== 'live') return;
+
+  const ip = document.getElementById('ipInput').value.trim();
+
+  if(!ip) return;
+
   try{
 
-    const response = await fetch(`http://${ESP32_IP}/telemetry`);
+    const response =
+      await fetch(`http://${ip}/telemetry?t=${Date.now()}`);
 
     const data = await response.json();
 
     setConn(true);
 
-    document.getElementById('rateVal').textContent =
-      data.RATE ?? '---';
-
-    document.getElementById('timeVal').textContent =
-      data.TIME ?? '---';
-
-    document.getElementById('setVal').textContent =
-      data.SET ?? '---';
-
-    document.getElementById('dfVal').textContent =
-      data.DF ?? '--';
-
-    document.getElementById('statusVal').textContent =
-      data.STATUS ?? '---';
-
-    document.getElementById('footerStatus').textContent =
-      data.STATUS ?? '---';
-
-    document.getElementById('footerTime').textContent =
-      new Date().toLocaleTimeString();
-
-    // Badge
-
-    const badge = document.getElementById('badge');
-
-    if(data.STATUS === 'RUNNING'){
-
-      badge.className = 'badge badge-ok';
-
-    }else{
-
-      badge.className = 'badge badge-off';
-    }
-
-    badge.textContent = data.STATUS;
-
-    // Card Border
-
-    const card = document.getElementById('card_DEVICE_01');
-
-    if(data.STATUS === 'RUNNING'){
-
-      card.className = 'device-card card-running';
-
-    }else{
-
-      card.className = 'device-card';
-    }
-
-    renderSummary(data.STATUS);
+    updateUI(data);
 
   }
 
@@ -509,19 +806,55 @@ async function fetchTelemetry(){
     console.log(e);
 
     setConn(false);
-
-    renderSummary('OFFLINE');
   }
 }
 
+setInterval(fetchTelemetry,1000);
 
-// ======================================================
-// REFRESH LOOP
-// ======================================================
 
-fetchTelemetry();
+// =====================================================
+// MOCK MODE
+// =====================================================
 
-setInterval(fetchTelemetry, 1000);
+function startMock(){
+
+  stopMock();
+
+  mockTimer = setInterval(()=>{
+
+    const rate = Math.floor(Math.random()*60)+30;
+
+    const time = Math.floor(Math.random()*120);
+
+    const statuses = ['RUNNING','PAUSED'];
+
+    const status =
+      statuses[Math.floor(Math.random()*statuses.length)];
+
+    updateUI({
+
+      RATE:rate,
+      SET:50,
+      STATUS:status,
+      TIME:time,
+      DF:20
+
+    });
+
+    setConn(true);
+
+  },1000);
+}
+
+function stopMock(){
+
+  if(mockTimer){
+
+    clearInterval(mockTimer);
+
+    mockTimer = null;
+  }
+}
 
 </script>
 
