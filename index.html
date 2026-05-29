@@ -4,578 +4,527 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DripStop IV Monitor</title>
+
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
+
 <style>
-:root {
-  --bg:#0f1923; --card:#162030; --card2:#1c2a3a;
-  --blue:#3b9fd4; --green:#22c97a; --red:#f05252; --yellow:#f5a623;
-  --text:#f0f4f8; --muted:#7a90a4; --border:#243044;
+
+:root{
+  --bg:#0f1923;
+  --card:#162030;
+  --card2:#1c2a3a;
+  --blue:#3b9fd4;
+  --green:#22c97a;
+  --red:#f05252;
+  --yellow:#f5a623;
+  --text:#f0f4f8;
+  --muted:#7a90a4;
+  --border:#243044;
   --radius:20px;
 }
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+}
+
+body{
+  font-family:'Inter',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+}
 
 /* TOP BAR */
+
 .topbar{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 28px;height:64px;background:var(--card);
-  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 28px;
+  height:64px;
+  background:var(--card);
+  border-bottom:1px solid var(--border);
 }
-.brand{font-size:20px;font-weight:800;letter-spacing:-0.5px;color:#fff;}
-.brand span{color:var(--blue);}
-.topbar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 
-/* MODE TOGGLE */
-.mode-toggle{
-  display:flex;background:var(--card2);border-radius:10px;
-  padding:3px;gap:2px;border:1px solid var(--border);
+.brand{
+  font-size:20px;
+  font-weight:800;
 }
-.mode-btn{
-  padding:6px 16px;border-radius:8px;border:none;
-  font-family:'Inter',sans-serif;font-size:12px;font-weight:700;
-  cursor:pointer;transition:all 0.2s;color:var(--muted);background:none;
-}
-.mode-btn.active{background:var(--blue);color:#fff;}
 
-/* CONN PILL */
+.brand span{
+  color:var(--blue);
+}
+
 .conn-pill{
-  display:flex;align-items:center;gap:7px;padding:7px 14px;
-  border-radius:20px;font-size:12px;font-weight:600;
-  background:var(--card2);border:1px solid var(--border);
-}
-.conn-dot{width:8px;height:8px;border-radius:50%;}
-.pill-ok  {border-color:#1a5c3a;color:var(--green);}
-.pill-ok .conn-dot{background:var(--green);animation:pulse 1.6s infinite;}
-.pill-wait{border-color:#1a3a5c;color:var(--blue);}
-.pill-wait .conn-dot{background:var(--blue);animation:pulse 0.5s infinite;}
-.pill-err {border-color:#5c1a1a;color:var(--red);}
-.pill-err .conn-dot{background:var(--red);}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.2}}
-
-.add-btn{
-  background:var(--blue);color:#fff;border:none;border-radius:10px;
-  padding:8px 18px;font-family:'Inter',sans-serif;font-size:13px;
-  font-weight:700;cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 14px;
+  border-radius:20px;
+  background:var(--card2);
+  border:1px solid var(--border);
+  font-size:12px;
+  font-weight:700;
 }
 
-/* SUMMARY BAR */
-.summary{display:flex;gap:10px;padding:20px 28px 0;flex-wrap:wrap;}
+.conn-dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+}
+
+.pill-ok{
+  color:var(--green);
+}
+
+.pill-ok .conn-dot{
+  background:var(--green);
+}
+
+.pill-err{
+  color:var(--red);
+}
+
+.pill-err .conn-dot{
+  background:var(--red);
+}
+
+/* SUMMARY */
+
+.summary{
+  display:flex;
+  gap:12px;
+  padding:20px 28px;
+  flex-wrap:wrap;
+}
+
 .sum-card{
-  background:var(--card);border:1px solid var(--border);border-radius:14px;
-  padding:14px 20px;display:flex;align-items:center;gap:12px;min-width:120px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:14px 20px;
+  display:flex;
+  align-items:center;
+  gap:12px;
 }
-.sum-icon{font-size:22px;}
-.sum-val{font-size:22px;font-weight:800;line-height:1;}
-.sum-lbl{font-size:11px;color:var(--muted);font-weight:600;margin-top:2px;text-transform:uppercase;}
+
+.sum-val{
+  font-size:24px;
+  font-weight:800;
+}
+
+.sum-lbl{
+  font-size:11px;
+  color:var(--muted);
+}
 
 /* GRID */
-.grid-wrap{padding:20px 28px 40px;}
-.grid-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
-.grid-title{font-size:18px;font-weight:700;color:var(--muted);}
+
+.grid-wrap{
+  padding:0 28px 40px;
+}
+
 .device-grid{
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
   gap:18px;
 }
-.empty{
-  grid-column:1/-1;text-align:center;padding:80px 20px;
-  color:var(--muted);
-}
-.empty-title{font-size:24px;font-weight:700;color:var(--blue);margin-bottom:10px;}
 
 /* DEVICE CARD */
-.device-card{
-  background:var(--card);border:1px solid var(--border);
-  border-radius:var(--radius);padding:24px;cursor:pointer;
-  transition:transform 0.15s,border-color 0.2s;position:relative;
-  overflow:hidden;
-}
-.device-card:hover{transform:translateY(-3px);}
-.card-alarm  {border-color:var(--red)!important;}
-.card-running{border-color:#1a5c3a!important;}
 
-/* accent bar at top of card */
-.card-accent{
-  position:absolute;top:0;left:0;right:0;height:3px;
-  background:var(--border);border-radius:var(--radius) var(--radius) 0 0;
+.device-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:24px;
 }
-.card-accent.green{background:var(--green);}
-.card-accent.red  {background:var(--red);}
-.card-accent.blue {background:var(--blue);}
-.card-accent.yellow{background:var(--yellow);}
+
+.card-running{
+  border-color:#1a5c3a;
+}
+
+.card-alarm{
+  border-color:var(--red);
+}
 
 .card-head{
-  display:flex;align-items:flex-start;justify-content:space-between;
-  margin-bottom:20px;gap:8px;
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:20px;
 }
-.card-name{font-size:17px;font-weight:700;color:#fff;}
-.card-id  {font-size:11px;color:var(--muted);margin-top:3px;}
 
-.badge{font-size:10px;font-weight:800;padding:4px 10px;border-radius:20px;letter-spacing:0.5px;}
-.badge-ok    {background:#0d3326;color:var(--green);}
-.badge-err   {background:#3d1515;color:var(--red);}
-.badge-warn  {background:#3d2d0a;color:var(--yellow);}
-.badge-off   {background:#1a2535;color:var(--muted);}
-.badge-calib {background:#0d2035;color:var(--blue);}
+.card-name{
+  font-size:18px;
+  font-weight:700;
+}
 
-/* BIG METRICS */
+.card-id{
+  font-size:11px;
+  color:var(--muted);
+  margin-top:4px;
+}
+
+.badge{
+  padding:5px 10px;
+  border-radius:20px;
+  font-size:10px;
+  font-weight:800;
+}
+
+.badge-ok{
+  background:#0d3326;
+  color:var(--green);
+}
+
+.badge-err{
+  background:#3d1515;
+  color:var(--red);
+}
+
+.badge-off{
+  background:#1a2535;
+  color:var(--muted);
+}
+
+/* METRICS */
+
 .card-metrics{
-  display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;
-}
-.metric-box{
-  background:var(--card2);border-radius:14px;
-  padding:16px 14px;text-align:center;
-}
-.metric-val{
-  font-size:44px;font-weight:900;line-height:1;
-  letter-spacing:-2px;transition:color 0.3s;
-}
-.metric-lbl{
-  font-size:10px;color:var(--muted);font-weight:700;
-  margin-top:6px;text-transform:uppercase;letter-spacing:0.5px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-bottom:14px;
 }
 
-/* THIRD ROW — smaller metrics */
+.metric-box{
+  background:var(--card2);
+  border-radius:14px;
+  padding:16px;
+  text-align:center;
+}
+
+.metric-val{
+  font-size:44px;
+  font-weight:900;
+}
+
+.metric-lbl{
+  margin-top:6px;
+  font-size:10px;
+  color:var(--muted);
+}
+
 .card-metrics-row{
-  display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:8px;
 }
+
 .metric-sm{
-  background:var(--card2);border-radius:10px;padding:10px;text-align:center;
+  background:var(--card2);
+  border-radius:10px;
+  padding:10px;
+  text-align:center;
 }
-.metric-sm-val{font-size:20px;font-weight:800;transition:color 0.3s;}
-.metric-sm-lbl{font-size:9px;color:var(--muted);font-weight:600;margin-top:3px;text-transform:uppercase;}
+
+.metric-sm-val{
+  font-size:20px;
+  font-weight:800;
+}
+
+.metric-sm-lbl{
+  font-size:9px;
+  color:var(--muted);
+  margin-top:4px;
+}
 
 .card-foot{
-  display:flex;align-items:center;justify-content:space-between;
-  font-size:11px;color:var(--muted);padding-top:12px;
+  margin-top:16px;
+  padding-top:12px;
   border-top:1px solid var(--border);
-}
-.status-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:5px;}
-
-/* MODALS */
-.modal-bg{
-  position:fixed;inset:0;background:rgba(0,0,0,0.7);
-  display:none;align-items:center;justify-content:center;
-  z-index:500;padding:16px;
-}
-.modal-bg.open{display:flex;}
-.modal{
-  background:var(--card);border:1px solid var(--border);
-  border-radius:24px;width:100%;max-height:90vh;overflow-y:auto;
-}
-.modal-hdr{
-  padding:24px 28px 0;display:flex;align-items:center;
+  display:flex;
   justify-content:space-between;
-}
-.modal-title{font-size:20px;font-weight:800;}
-.close-btn{
-  background:var(--card2);border:1px solid var(--border);border-radius:8px;
-  width:32px;height:32px;cursor:pointer;font-size:18px;color:var(--muted);
-  display:flex;align-items:center;justify-content:center;
-}
-.close-btn:hover{color:#fff;}
-.modal-body{padding:20px 28px 28px;}
-.field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
-.field label{font-size:13px;font-weight:600;color:var(--muted);}
-.field input,.field select{
-  background:var(--card2);border:1px solid var(--border);border-radius:10px;
-  padding:11px 14px;font-family:'Inter',sans-serif;font-size:14px;
-  color:var(--text);outline:none;
-}
-.field input:focus,.field select:focus{border-color:var(--blue);}
-.field-err{font-size:12px;color:var(--red);}
-.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
-.btn-primary{
-  background:var(--blue);color:#fff;border:none;border-radius:10px;
-  padding:10px 24px;font-family:'Inter',sans-serif;font-size:14px;font-weight:700;cursor:pointer;
-}
-.btn-secondary{
-  background:var(--card2);border:1px solid var(--border);border-radius:10px;
-  padding:10px 20px;font-family:'Inter',sans-serif;font-size:14px;
-  font-weight:600;color:var(--muted);cursor:pointer;
-}
-.btn-danger{
-  background:#3d1515;border:1px solid #7a2020;border-radius:10px;
-  padding:10px 20px;font-family:'Inter',sans-serif;font-size:14px;
-  font-weight:600;color:var(--red);cursor:pointer;margin-right:auto;
+  font-size:11px;
+  color:var(--muted);
 }
 
 @media(max-width:700px){
-  .topbar,.summary,.grid-wrap{padding-left:16px;padding-right:16px;}
-  .metric-val{font-size:36px;}
-  .device-grid{grid-template-columns:1fr;}
+  .summary,
+  .grid-wrap{
+    padding-left:16px;
+    padding-right:16px;
+  }
+
+  .device-grid{
+    grid-template-columns:1fr;
+  }
 }
+
 </style>
 </head>
+
 <body>
 
-<!-- TOP BAR -->
+<!-- TOPBAR -->
+
 <div class="topbar">
-  <div class="brand">Drip<span>Stop</span> IV Monitor</div>
-  <div class="topbar-right">
-    <div class="mode-toggle">
-      <button class="mode-btn active" id="btnLive" onclick="setMode('live')">⬤ Live</button>
-      <button class="mode-btn"        id="btnMock" onclick="setMode('mock')">⬡ Mock</button>
-    </div>
-    <div class="conn-pill pill-wait" id="connPill">
-      <span class="conn-dot"></span>
-      <span id="connText">Connecting…</span>
-    </div>
-    <button class="add-btn" onclick="openAdd()">+ Add Device</button>
+
+  <div class="brand">
+    Drip<span>Stop</span> IV Monitor
   </div>
+
+  <div class="conn-pill pill-err" id="connPill">
+    <span class="conn-dot"></span>
+    <span id="connText">Connecting...</span>
+  </div>
+
 </div>
 
 <!-- SUMMARY -->
+
 <div class="summary" id="summary"></div>
 
 <!-- GRID -->
-<div class="grid-wrap">
-  <div class="grid-hdr">
-    <div class="grid-title">DEVICES &nbsp;<span id="devCount"></span></div>
-  </div>
-  <div class="device-grid" id="grid">
-    <div class="empty">
-      <div class="empty-title">No devices yet</div>
-      Click "+ Add Device" to register an ESP32 device.
-    </div>
-  </div>
-</div>
 
-<!-- ADD/EDIT MODAL -->
-<div class="modal-bg" id="addModal">
-  <div class="modal" style="max-width:420px;">
-    <div class="modal-hdr">
-      <div class="modal-title" id="addTitle">Add Device</div>
-      <button class="close-btn" onclick="closeModal('addModal')">✕</button>
+<div class="grid-wrap">
+
+  <div class="device-grid" id="grid">
+
+    <div class="device-card" id="card_DEVICE_01">
+
+      <div class="card-head">
+
+        <div>
+          <div class="card-name">Patient Monitor</div>
+          <div class="card-id">DEVICE_01 · Bed 1</div>
+        </div>
+
+        <span class="badge badge-off" id="badge">
+          OFFLINE
+        </span>
+
+      </div>
+
+      <div class="card-metrics">
+
+        <div class="metric-box">
+          <div class="metric-val" id="rateVal">---</div>
+          <div class="metric-lbl">Rate</div>
+        </div>
+
+        <div class="metric-box">
+          <div class="metric-val" id="timeVal">---</div>
+          <div class="metric-lbl">Time Left</div>
+        </div>
+
+      </div>
+
+      <div class="card-metrics-row">
+
+        <div class="metric-sm">
+          <div class="metric-sm-val" id="setVal">---</div>
+          <div class="metric-sm-lbl">Set</div>
+        </div>
+
+        <div class="metric-sm">
+          <div class="metric-sm-val" id="dfVal">--</div>
+          <div class="metric-sm-lbl">DF</div>
+        </div>
+
+        <div class="metric-sm">
+          <div class="metric-sm-val" id="statusVal">---</div>
+          <div class="metric-sm-lbl">Status</div>
+        </div>
+
+      </div>
+
+      <div class="card-foot">
+
+        <span id="footerStatus">
+          No Signal
+        </span>
+
+        <span id="footerTime"></span>
+
+      </div>
+
     </div>
-    <div class="modal-body">
-      <div class="field">
-        <label>Device ID (must match DEVICE_ID in ESP32 code)</label>
-        <input id="fId" placeholder="e.g. DEVICE_01" oninput="this.value=this.value.toUpperCase().replace(/\s/g,'_')">
-        <div class="field-err" id="fIdErr"></div>
-      </div>
-      <div class="field">
-        <label>Patient Name</label>
-        <input id="fName" placeholder="e.g. John Smith">
-        <div class="field-err" id="fNameErr"></div>
-      </div>
-      <div class="field">
-        <label>Bed / Room (optional)</label>
-        <input id="fBed" placeholder="e.g. Bed 4A">
-      </div>
-      <div class="modal-actions">
-        <button class="btn-danger"    id="delBtn" onclick="deleteDevice()" style="display:none">Remove</button>
-        <button class="btn-secondary" onclick="closeModal('addModal')">Cancel</button>
-        <button class="btn-primary"   onclick="saveDevice()">Save</button>
-      </div>
-    </div>
+
   </div>
+
 </div>
 
 <script>
-// ── CONFIG ────────────────────────────────────────────────────────
-const BROKER    = 'wss://broker.emqx.io:8084/mqtt';
-const SUB_TOPIC = 'dripstop/+/telemetry';
 
-// ── MODE ──────────────────────────────────────────────────────────
-let mode = 'live';   // 'live' | 'mock'
-let mockTimer = null;
+// ======================================================
+// CONNECTION UI
+// ======================================================
 
-function setMode(m) {
-  mode = m;
-  document.getElementById('btnLive').classList.toggle('active', m === 'live');
-  document.getElementById('btnMock').classList.toggle('active', m === 'mock');
-  if (m === 'mock') startMock();
-  else              stopMock();
-}
+function setConn(ok){
 
-function startMock() {
-  stopMock();
-  const devices = getDevices();
-  if (!devices.length) { alert('Add a device first, then switch to Mock.'); setMode('live'); return; }
-  let tick = 0;
-  mockTimer = setInterval(() => {
-    tick++;
-    devices.forEach(d => {
-      const rate = 30 + Math.round(20 * Math.sin(tick * 0.15 + d.id.charCodeAt(7)));
-      parsePacket(d.id,
-        `RATE=${rate},SET=50,TIME=${120 - tick % 120},` +
-        `ALARM=${tick % 40 === 0 ? 'OCCLUSION' : 'NORMAL'},` +
-        `STATUS=${tick < 5 ? 'CALIBRATING' : 'RUNNING'},DF=20`);
-      renderCard(d.id);
-    });
-    renderSummary();
-  }, 800);
-}
-function stopMock() { if (mockTimer) { clearInterval(mockTimer); mockTimer = null; } }
+  const pill = document.getElementById('connPill');
+  const text = document.getElementById('connText');
 
-// ── STORAGE ───────────────────────────────────────────────────────
-function getDevices() { try { return JSON.parse(localStorage.getItem('ds_devices') || '[]'); } catch { return []; } }
-function saveDevices(d) { localStorage.setItem('ds_devices', JSON.stringify(d)); }
+  if(ok){
 
-// ── LIVE DATA ─────────────────────────────────────────────────────
-const live = {};
-function getLive(id) {
-  if (!live[id]) live[id] = { RATE:null, SET:null, TIME:null,
-    ALARM:'OFFLINE', STATUS:'IDLE', DF:'--', lastSeen:null };
-  return live[id];
-}
+    pill.className = 'conn-pill pill-ok';
+    text.textContent = 'Live · Connected';
 
-function parsePacket(deviceId, line) {
-  const t = getLive(deviceId);
-  line.split(',').forEach(pair => {
-    const eq = pair.indexOf('=');
-    if (eq < 0) return;
-    const k = pair.slice(0, eq).trim().toUpperCase();
-    const v = pair.slice(eq + 1).trim();
-    if (k === 'RATE' || k === 'SET' || k === 'TIME')
-      t[k] = (v === 'NOT_SET' || v === '') ? null : parseInt(v, 10);
-    else if (k === 'ALARM' || k === 'STATUS' || k === 'DF')
-      t[k] = v;
-  });
-  t.lastSeen = new Date();
-}
+  }else{
 
-// ── MQTT ──────────────────────────────────────────────────────────
-let mqttClient = null;
-function mqttConnect() {
-  if (typeof mqtt === 'undefined') { setConn('err', 'MQTT lib failed'); return; }
-  try {
-    setConn('wait', 'Connecting…');
-    mqttClient = mqtt.connect(BROKER, {
-      clientId: 'drip_' + Math.random().toString(16).slice(2,8),
-      clean: true, reconnectPeriod: 5000, connectTimeout: 15000
-    });
-    mqttClient.on('connect', () => {
-      setConn('ok', 'Live · Connected');
-      mqttClient.subscribe(SUB_TOPIC);
-    });
-    mqttClient.on('message', (topic, payload) => {
-      if (mode !== 'live') return;
-      const parts = topic.split('/');
-      if (parts.length < 3) return;
-      const deviceId = parts[1];
-      const line = payload.toString().trim();
-      if (!line.includes('RATE=')) return;
-      parsePacket(deviceId, line);
-      renderCard(deviceId);
-      renderSummary();
-    });
-    mqttClient.on('error',    e  => { setConn('err',  'MQTT Error'); console.error(e); });
-    mqttClient.on('offline',  () =>   setConn('wait', 'Reconnecting…'));
-    mqttClient.on('reconnect',() =>   setConn('wait', 'Reconnecting…'));
-  } catch(e) { setConn('err','Connect failed'); console.error(e); }
-}
-function setConn(s, t) {
-  const p = document.getElementById('connPill');
-  const l = document.getElementById('connText');
-  p.className = 'conn-pill ' + (s==='ok'?'pill-ok':s==='wait'?'pill-wait':'pill-err');
-  l.textContent = t;
-}
-
-// ── RENDER ────────────────────────────────────────────────────────
-function rateColor(r, s) {
-  if (r === null || s === null || s === 0) return 'var(--muted)';
-  const d = Math.abs(r - s) / s;
-  return d < 0.05 ? 'var(--green)' : d < 0.15 ? 'var(--blue)' : 'var(--red)';
-}
-function isOffline(t) { return !t.lastSeen || (Date.now() - t.lastSeen.getTime() > 15000); }
-
-function accentClass(t, off) {
-  if (off) return '';
-  if (t.ALARM && t.ALARM !== 'NORMAL' && t.ALARM !== 'OFFLINE') return 'red';
-  if (t.STATUS === 'CALIBRATING') return 'blue';
-  if (t.STATUS === 'RUNNING') return 'green';
-  if (t.STATUS === 'PAUSED') return 'yellow';
-  return '';
-}
-
-function renderAllCards() {
-  const devices = getDevices();
-  document.getElementById('devCount').textContent = devices.length ? `(${devices.length})` : '';
-  const grid = document.getElementById('grid');
-  if (!devices.length) {
-    grid.innerHTML = `<div class="empty"><div class="empty-title">No devices yet</div>Click "+ Add Device" to register an ESP32 device.</div>`;
-    renderSummary(); return;
+    pill.className = 'conn-pill pill-err';
+    text.textContent = 'ESP32 Offline';
   }
-  grid.innerHTML = devices.map(d => `
-    <div class="device-card" id="card_${d.id}" onclick="openEdit('${d.id}')">
-      <div class="card-accent" id="acc_${d.id}"></div>
-      <div class="card-head">
-        <div>
-          <div class="card-name">${d.name}</div>
-          <div class="card-id">${d.id}${d.bed ? ' · ' + d.bed : ''}</div>
-        </div>
-        <span class="badge badge-off" id="badge_${d.id}">OFFLINE</span>
-      </div>
-      <div class="card-metrics">
-        <div class="metric-box">
-          <div class="metric-val" id="mR_${d.id}" style="color:var(--muted)">---</div>
-          <div class="metric-lbl">Rate (dpm)</div>
-        </div>
-        <div class="metric-box">
-          <div class="metric-val" id="mT_${d.id}" style="color:var(--muted)">---</div>
-          <div class="metric-lbl">Time Left (min)</div>
-        </div>
-      </div>
-      <div class="card-metrics-row">
-        <div class="metric-sm">
-          <div class="metric-sm-val" id="mS_${d.id}" style="color:var(--muted)">---</div>
-          <div class="metric-sm-lbl">Set (dpm)</div>
-        </div>
-        <div class="metric-sm">
-          <div class="metric-sm-val" id="mDF_${d.id}" style="color:var(--muted)">--</div>
-          <div class="metric-sm-lbl">Drop Factor</div>
-        </div>
-        <div class="metric-sm">
-          <div class="metric-sm-val" id="mSt_${d.id}" style="color:var(--muted)">---</div>
-          <div class="metric-sm-lbl">Status</div>
-        </div>
-      </div>
-      <div class="card-foot">
-        <span><span class="status-dot" id="sDot_${d.id}" style="background:var(--muted)"></span><span id="sLbl_${d.id}">No signal</span></span>
-        <span id="sTime_${d.id}" style="font-size:10px;"></span>
-      </div>
-    </div>`).join('');
-  devices.forEach(d => renderCard(d.id));
-  renderSummary();
 }
 
-function renderCard(id) {
-  const t = getLive(id);
-  const off = isOffline(t);
-  const sc = { RUNNING:'var(--green)', PAUSED:'var(--yellow)', CALIBRATING:'var(--blue)', COMPLETE:'var(--muted)', IDLE:'var(--muted)' };
-  const bmap = { NORMAL:'badge-ok', OCCLUSION:'badge-err', ERROR:'badge-err', RECALIBRATE:'badge-warn', COMPLETE:'badge-ok', OFFLINE:'badge-off', CALIBRATING:'badge-calib' };
 
-  const s = (eid, val, col) => { const el = document.getElementById(eid); if (!el) return; el.textContent = val; if (col !== undefined) el.style.color = col; };
+// ======================================================
+// RENDER SUMMARY
+// ======================================================
 
-  // Badge
-  const badge = document.getElementById('badge_' + id);
-  if (badge) {
-    const label = off ? 'OFFLINE' : (t.ALARM && t.ALARM !== 'NORMAL' ? t.ALARM : t.STATUS || 'IDLE');
-    badge.className = 'badge ' + (bmap[off ? 'OFFLINE' : (t.ALARM && t.ALARM !== 'NORMAL' ? t.ALARM : t.STATUS)] || 'badge-off');
-    badge.textContent = label;
-  }
+function renderSummary(status){
 
-  // Accent bar
-  const acc = document.getElementById('acc_' + id);
-  if (acc) acc.className = 'card-accent ' + accentClass(t, off);
+  let running = 0;
+  let alarms = 0;
+  let offline = 0;
 
-  // Card border
-  const card = document.getElementById('card_' + id);
-  if (card) {
-    card.className = 'device-card' +
-      (!off && t.ALARM && t.ALARM !== 'NORMAL' ? ' card-alarm' :
-       !off && t.STATUS === 'RUNNING' ? ' card-running' : '');
-  }
+  if(status === 'RUNNING') running = 1;
+  else if(status === 'OFFLINE') offline = 1;
 
-  // Big metrics
-  s('mR_' + id, t.RATE !== null ? t.RATE : '---', off ? 'var(--muted)' : rateColor(t.RATE, t.SET));
-  s('mT_' + id, t.TIME !== null ? t.TIME : '---',
-    t.TIME !== null && t.TIME < 10 ? 'var(--red)' : 'var(--green)');
-
-  // Small metrics
-  s('mS_'  + id, t.SET  !== null ? t.SET  : '---', 'var(--blue)');
-  s('mDF_' + id, t.DF && t.DF !== 'NOT_SET' ? t.DF : '--', 'var(--muted)');
-  s('mSt_' + id, t.STATUS || '---', off ? 'var(--muted)' : (sc[t.STATUS] || 'var(--muted)'));
-
-  // Footer
-  const dot = document.getElementById('sDot_' + id);
-  const lbl = document.getElementById('sLbl_' + id);
-  const tm  = document.getElementById('sTime_' + id);
-  if (dot) dot.style.background = off ? 'var(--muted)' : (sc[t.STATUS] || 'var(--muted)');
-  if (lbl) lbl.textContent = off ? 'No signal' : (t.STATUS || 'IDLE');
-  if (tm && t.lastSeen) tm.textContent = t.lastSeen.toLocaleTimeString();
-}
-
-function renderSummary() {
-  const devices = getDevices();
-  let running = 0, alarms = 0, offline = 0;
-  devices.forEach(d => {
-    const t = getLive(d.id);
-    if (isOffline(t)) { offline++; return; }
-    if (t.STATUS === 'RUNNING' || t.STATUS === 'CALIBRATING') running++;
-    if (t.ALARM && t.ALARM !== 'NORMAL') alarms++;
-  });
   document.getElementById('summary').innerHTML = `
-    <div class="sum-card"><span class="sum-icon">💧</span><div><div class="sum-val" style="color:var(--green)">${running}</div><div class="sum-lbl">Active</div></div></div>
-    <div class="sum-card"><span class="sum-icon">🚨</span><div><div class="sum-val" style="color:${alarms>0?'var(--red)':'var(--muted)'}">${alarms}</div><div class="sum-lbl">Alarms</div></div></div>
-    <div class="sum-card"><span class="sum-icon">📡</span><div><div class="sum-val" style="color:var(--muted)">${offline}</div><div class="sum-lbl">Offline</div></div></div>
-    <div class="sum-card"><span class="sum-icon">🏥</span><div><div class="sum-val">${devices.length}</div><div class="sum-lbl">Total</div></div></div>`;
+
+    <div class="sum-card">
+      <div>
+        <div class="sum-val" style="color:var(--green)">
+          ${running}
+        </div>
+        <div class="sum-lbl">ACTIVE</div>
+      </div>
+    </div>
+
+    <div class="sum-card">
+      <div>
+        <div class="sum-val" style="color:${alarms ? 'var(--red)' : 'var(--muted)'}">
+          ${alarms}
+        </div>
+        <div class="sum-lbl">ALARMS</div>
+      </div>
+    </div>
+
+    <div class="sum-card">
+      <div>
+        <div class="sum-val" style="color:var(--muted)">
+          ${offline}
+        </div>
+        <div class="sum-lbl">OFFLINE</div>
+      </div>
+    </div>
+
+    <div class="sum-card">
+      <div>
+        <div class="sum-val">
+          1
+        </div>
+        <div class="sum-lbl">TOTAL</div>
+      </div>
+    </div>
+
+  `;
 }
 
-setInterval(() => { getDevices().forEach(d => renderCard(d.id)); renderSummary(); }, 5000);
 
-// ── ADD/EDIT MODAL ────────────────────────────────────────────────
-let editingId = null;
-function openAdd() {
-  editingId = null;
-  document.getElementById('addTitle').textContent = 'Add Device';
-  document.getElementById('delBtn').style.display = 'none';
-  document.getElementById('fId').disabled = false;
-  document.getElementById('fId').value = '';
-  document.getElementById('fName').value = '';
-  document.getElementById('fBed').value = '';
-  document.getElementById('fIdErr').textContent = '';
-  document.getElementById('fNameErr').textContent = '';
-  document.getElementById('addModal').classList.add('open');
-  setTimeout(() => document.getElementById('fId').focus(), 100);
-}
-function openEdit(id) {
-  const d = getDevices().find(x => x.id === id);
-  if (!d) return;
-  editingId = id;
-  document.getElementById('addTitle').textContent = 'Edit Device';
-  document.getElementById('delBtn').style.display = '';
-  document.getElementById('fId').value = d.id;
-  document.getElementById('fId').disabled = true;
-  document.getElementById('fName').value = d.name;
-  document.getElementById('fBed').value = d.bed || '';
-  document.getElementById('fIdErr').textContent = '';
-  document.getElementById('fNameErr').textContent = '';
-  document.getElementById('addModal').classList.add('open');
-}
-function saveDevice() {
-  const id   = document.getElementById('fId').value.trim();
-  const name = document.getElementById('fName').value.trim();
-  const bed  = document.getElementById('fBed').value.trim();
-  let ok = true;
-  document.getElementById('fIdErr').textContent = '';
-  document.getElementById('fNameErr').textContent = '';
-  if (!id)   { document.getElementById('fIdErr').textContent   = 'Required.'; ok = false; }
-  if (!name) { document.getElementById('fNameErr').textContent = 'Required.'; ok = false; }
-  if (!ok) return;
-  let devices = getDevices();
-  if (editingId) {
-    devices = devices.map(d => d.id === editingId ? {...d, name, bed} : d);
-  } else {
-    if (devices.find(d => d.id === id)) { document.getElementById('fIdErr').textContent = 'Already exists.'; return; }
-    devices.push({ id, name, bed });
+// ======================================================
+// TELEMETRY FETCH
+// ======================================================
+
+const ESP32_IP = window.location.hostname;
+
+
+async function fetchTelemetry(){
+
+  try{
+
+    const response = await fetch(`http://${ESP32_IP}/telemetry`);
+
+    const data = await response.json();
+
+    setConn(true);
+
+    document.getElementById('rateVal').textContent =
+      data.RATE ?? '---';
+
+    document.getElementById('timeVal').textContent =
+      data.TIME ?? '---';
+
+    document.getElementById('setVal').textContent =
+      data.SET ?? '---';
+
+    document.getElementById('dfVal').textContent =
+      data.DF ?? '--';
+
+    document.getElementById('statusVal').textContent =
+      data.STATUS ?? '---';
+
+    document.getElementById('footerStatus').textContent =
+      data.STATUS ?? '---';
+
+    document.getElementById('footerTime').textContent =
+      new Date().toLocaleTimeString();
+
+    // Badge
+
+    const badge = document.getElementById('badge');
+
+    if(data.STATUS === 'RUNNING'){
+
+      badge.className = 'badge badge-ok';
+
+    }else{
+
+      badge.className = 'badge badge-off';
+    }
+
+    badge.textContent = data.STATUS;
+
+    // Card Border
+
+    const card = document.getElementById('card_DEVICE_01');
+
+    if(data.STATUS === 'RUNNING'){
+
+      card.className = 'device-card card-running';
+
+    }else{
+
+      card.className = 'device-card';
+    }
+
+    renderSummary(data.STATUS);
+
   }
-  saveDevices(devices);
-  closeModal('addModal');
-  renderAllCards();
-}
-function deleteDevice() {
-  if (!editingId || !confirm('Remove ' + editingId + '?')) return;
-  saveDevices(getDevices().filter(d => d.id !== editingId));
-  delete live[editingId];
-  closeModal('addModal');
-  renderAllCards();
-}
-function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
-  if (id === 'addModal') { editingId = null; document.getElementById('fId').disabled = false; }
-}
-document.querySelectorAll('.modal-bg').forEach(bg =>
-  bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); }));
 
-// ── BOOT ──────────────────────────────────────────────────────────
-window.onload = function() {
-  renderAllCards();
-  mqttConnect();
-};
+  catch(e){
+
+    console.log(e);
+
+    setConn(false);
+
+    renderSummary('OFFLINE');
+  }
+}
+
+
+// ======================================================
+// REFRESH LOOP
+// ======================================================
+
+fetchTelemetry();
+
+setInterval(fetchTelemetry, 1000);
+
 </script>
+
 </body>
 </html>
+
