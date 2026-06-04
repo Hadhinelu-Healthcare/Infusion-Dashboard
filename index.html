@@ -8,30 +8,48 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <style>
 :root{
-  --bg:#eaf0f8; --bg-2:#e1eaf6;
-  --surface:#ffffff; --surface-2:#f4f8fd;
-  --ink:#0d1b2e; --ink-2:#33445c; --muted:#7488a3; --faint:#9fb0c7;
-  --brand:#1f74e0; --brand-2:#4aa3ff; --brand-deep:#0b4ea2; --brand-wash:#eaf3ff;
-  --ok:#10b981; --ok-wash:#e7faf2;
-  --warn:#f59e0b; --warn-wash:#fff5e3;
-  --crit:#ef4444; --crit-wash:#fdeaea;
-  --slate:#94a3b8; --slate-wash:#eef2f7;
-  --line:#e2e9f3; --line-2:#d4dfee;
+  --bg:#0b1b2b; --bg-2:#0e2236;
+  --surface:#13283c; --surface-2:#0f2032;
+  --ink:#eaf3fa; --ink-2:#b7cee0; --muted:#7e98ad; --faint:#5e788d;
+  --brand:#2596be; --brand-2:#4fb6d8; --brand-deep:#17708f; --brand-wash:#0f3243;
+  --ok:#27c08a; --ok-wash:#0e3328;
+  --warn:#f0b429; --warn-wash:#3a2f10;
+  --crit:#f4574f; --crit-wash:#3a1714;
+  --slate:#6b8298; --slate-wash:#16293a;
+  --line:#1f3b52; --line-2:#2b506d;
   --shadow:0 1px 2px rgba(16,40,80,.04),0 8px 24px rgba(16,40,80,.06);
   --shadow-lg:0 12px 40px rgba(13,40,90,.14);
   --r:20px; --r-sm:14px; --r-lg:28px;
   --mono:'JetBrains Mono',ui-monospace,monospace;
   --sans:'Manrope',system-ui,sans-serif;
+  --glow-1:#0c2236; --glow-2:#0a1f30;
+}
+/* Light theme — toggled via Settings; brand color stays #2596be */
+html[data-theme="light"]{
+  --bg:#eef3f9; --bg-2:#e4ecf6;
+  --surface:#ffffff; --surface-2:#f4f8fd;
+  --ink:#0d1b2e; --ink-2:#33445c; --muted:#6b7d97; --faint:#9fb0c7;
+  --brand:#1c7ea6; --brand-2:#2596be; --brand-deep:#155d7a; --brand-wash:#e7f4f9;
+  --ok:#0e9f6e; --ok-wash:#e7faf2;
+  --warn:#c98a00; --warn-wash:#fff5e3;
+  --crit:#d63b33; --crit-wash:#fdeaea;
+  --slate:#8194a8; --slate-wash:#eef2f7;
+  --line:#e2e9f3; --line-2:#d4dfee;
+  --shadow:0 1px 2px rgba(16,40,80,.04),0 8px 24px rgba(16,40,80,.06);
+  --shadow-lg:0 12px 40px rgba(13,40,90,.14);
+  --glow-1:#dbeafe; --glow-2:#e8f1ff;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{-webkit-font-smoothing:antialiased}
 body{
   font-family:var(--sans);color:var(--ink);min-height:100vh;
   background:
-    radial-gradient(1200px 600px at 85% -10%,#dbeafe 0%,transparent 55%),
-    radial-gradient(900px 500px at 5% 0%,#e8f1ff 0%,transparent 50%),
+    radial-gradient(1200px 600px at 85% -10%,var(--glow-1) 0%,transparent 55%),
+    radial-gradient(900px 500px at 5% 0%,var(--glow-2) 0%,transparent 50%),
     var(--bg);
   background-attachment:fixed;
 }
@@ -42,7 +60,7 @@ body{
   position:sticky;top:0;z-index:40;
   display:flex;align-items:center;justify-content:space-between;gap:16px;
   padding:14px 26px;
-  background:rgba(255,255,255,.72);
+  background:rgba(15,32,50,.78);
   backdrop-filter:saturate(180%) blur(18px);
   -webkit-backdrop-filter:saturate(180%) blur(18px);
   border-bottom:1px solid rgba(210,223,238,.7);
@@ -99,7 +117,7 @@ body{
 }
 .banner.show{display:flex;animation:drop .4s ease}
 .banner svg{width:18px;height:18px;flex:none;margin-top:1px}
-.banner code{font-family:var(--mono);background:rgba(0,0,0,.06);padding:1px 6px;border-radius:5px;font-size:12px}
+.banner code{font-family:var(--mono);background:rgba(255,255,255,.10);padding:1px 6px;border-radius:5px;font-size:12px}
 @keyframes drop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 
 /* ── SUMMARY ──────────────────────────────────────────── */
@@ -118,12 +136,12 @@ body{
 
 /* ── GRID ─────────────────────────────────────────────── */
 .grid{
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:18px;
-  padding:18px 26px 48px;max-width:1400px;margin:0 auto;width:100%;
+  display:grid;grid-template-columns:1fr;gap:22px;
+  padding:18px 26px 48px;max-width:1640px;margin:0 auto;width:100%;
 }
 .card{
   background:var(--surface);border:1.5px solid var(--line);border-radius:var(--r-lg);
-  padding:22px;box-shadow:var(--shadow);cursor:pointer;position:relative;overflow:hidden;
+  padding:28px;box-shadow:var(--shadow);cursor:pointer;position:relative;overflow:hidden;
   transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s,border-color .25s;
   animation:cardin .5s cubic-bezier(.2,.8,.2,1) both;
 }
@@ -161,13 +179,31 @@ body{
 .readout{display:grid;grid-template-columns:1.3fr 1fr;gap:13px;margin-bottom:13px}
 .ro{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:16px 18px}
 .ro .top{display:flex;align-items:baseline;gap:7px}
-.ro .big{font-family:var(--mono);font-size:42px;font-weight:700;line-height:.95;letter-spacing:-2px;transition:color .3s}
+.ro .big{font-family:var(--mono);font-size:54px;font-weight:700;line-height:.95;letter-spacing:-2px;transition:color .3s}
 .ro .unit{font-size:13px;font-weight:700;color:var(--muted)}
 .ro .l{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:9px}
 .ro .alt{font-family:var(--mono);font-size:12px;color:var(--faint);margin-top:4px}
 .ro.rate .big{color:var(--brand)}
 .card.alarm .ro.rate .big{color:var(--crit)}
 
+.spark-wrap{position:relative;background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:10px 12px 6px;margin-bottom:16px}
+.spark-l{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.spark{display:block;width:100%;height:72px}
+
+/* Wide card: info on the left, big live graph on the right */
+.card-body{display:grid;grid-template-columns:minmax(340px,420px) 1fr;gap:26px;align-items:stretch}
+.card-left{display:flex;flex-direction:column}
+.card-left .minirow{margin-top:6px}
+.card-left .c-foot{margin-top:auto}
+.card-graph{display:flex;flex-direction:column;background:var(--surface-2);
+  border:1px solid var(--line);border-radius:16px;padding:16px 18px;min-height:280px}
+.card-graph .spark-l{margin-bottom:10px;font-size:10px}
+.card-graph .spark{flex:1 1 auto;height:auto;min-height:230px}
+@media(max-width:820px){
+  .card-body{grid-template-columns:1fr}
+  .card-graph{min-height:180px}
+  .card-graph .spark{min-height:150px}
+}
 .minirow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
 .mini{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
 .mini .v{font-family:var(--mono);font-size:19px;font-weight:700;letter-spacing:-.5px}
@@ -241,9 +277,71 @@ body{
 .sess .v{font-family:var(--mono);font-size:24px;font-weight:700;letter-spacing:-.5px}
 .sess .l{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:5px}
 
+/* 3D device blip (bottom-right, rotates while running) */
+.blip3d{position:fixed;right:22px;bottom:22px;z-index:55;width:148px;height:170px;
+  background:var(--surface);border:1px solid var(--line);border-radius:18px;
+  box-shadow:var(--shadow-lg);padding:10px;display:none;flex-direction:column;align-items:center;
+  transition:border-color .3s, box-shadow .3s}
+.blip3d.show{display:flex}
+.blip3d.running{border-color:var(--brand-2)}
+.blip3d.alarm{border-color:var(--crit);box-shadow:0 0 0 1px var(--crit),var(--shadow-lg)}
+.blip3d-canvas{width:128px;height:128px;flex:none}
+.blip3d-canvas canvas{display:block;border-radius:12px}
+.blip3d-label{margin-top:6px;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.blip3d.running .blip3d-label{color:var(--brand)}
+.blip3d.alarm .blip3d-label{color:var(--crit)}
+@media(max-width:560px){ .blip3d{width:116px;height:138px} .blip3d-canvas{width:96px;height:96px} }
+
+/* connection-success badge: shown only when dashboard + device are on the same network */
+.netok{display:none;align-items:center;gap:7px;padding:7px 13px;border-radius:11px;
+  background:var(--ok-wash);border:1px solid var(--ok);color:var(--ok);
+  font-size:12.5px;font-weight:800;letter-spacing:.02em;white-space:nowrap;
+  animation:netokin .35s ease}
+.netok.show{display:inline-flex}
+.netok .ck{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;
+  border-radius:50%;background:var(--ok);color:#fff;font-size:11px}
+@keyframes netokin{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
+
 /* settings popover */
 .pop{position:fixed;top:70px;right:26px;z-index:70;width:330px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-lg);padding:20px;transform:translateY(-8px) scale(.98);opacity:0;pointer-events:none;transition:.22s}
 .pop.show{transform:none;opacity:1;pointer-events:auto}
+
+/* settings drawer (appearance + logs + history) */
+.sheet{position:fixed;top:0;right:0;height:100%;width:440px;max-width:92vw;z-index:65;
+  background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--shadow-lg);
+  transform:translateX(102%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+.sheet.show{transform:none}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;padding:20px 22px;border-bottom:1px solid var(--line)}
+.sheet-head h3{font-size:17px;font-weight:800}
+.sheet-body{padding:20px 22px;overflow-y:auto;flex:1}
+.set-sec{margin-bottom:22px}
+.set-sec h4{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0}
+.set-row .lbl{font-size:14px;font-weight:600;color:var(--ink)}
+.set-row .sub{font-size:11.5px;color:var(--muted);margin-top:2px}
+.switch{position:relative;width:52px;height:30px;flex:none;border-radius:30px;background:var(--surface-2);
+  border:1px solid var(--line);cursor:pointer;transition:.22s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;
+  background:var(--brand);transition:.22s}
+.switch.on{background:var(--brand-wash);border-color:var(--brand-2)}
+.switch.on::after{transform:translateX(22px)}
+.seg.set-tabs{margin-bottom:14px;width:100%}
+.seg.set-tabs button{flex:1}
+.logrow{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.logrow:last-child{border-bottom:none}
+.logrow .dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex:none;background:var(--brand)}
+.logrow.alarm .dot{background:var(--crit)} .logrow.status .dot{background:var(--slate)}
+.logrow.complete .dot{background:var(--ok)}
+.logrow .msg{font-size:13px;font-weight:600;color:var(--ink)}
+.logrow .meta{font-size:11px;color:var(--muted);margin-top:2px}
+.log-empty{font-size:13px;color:var(--muted);text-align:center;padding:30px 0}
+.inf-card{background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:13px 15px;margin-bottom:10px}
+.inf-card .top{display:flex;align-items:center;justify-content:space-between}
+.inf-card .rsn{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:2px 8px;border-radius:7px}
+.rsn.ok{background:var(--ok-wash);color:var(--ok)} .rsn.alarm{background:var(--crit-wash);color:var(--crit)}
+.rsn.stop{background:var(--slate-wash);color:var(--slate)}
+.inf-card .det{font-size:12px;color:var(--muted);margin-top:6px;display:flex;gap:16px;flex-wrap:wrap}
+.inf-card .det b{color:var(--ink);font-weight:700}
 .pop h4{font-size:14px;font-weight:800;margin-bottom:5px}
 .pop p{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:14px}
 .pop label{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:7px}
@@ -279,10 +377,19 @@ body{
       <button id="mockBtn">MOCK</button>
     </div>
     <div class="conn off" id="conn"><span class="pip"></span><span id="connTxt">OFFLINE</span></div>
+    <div class="netok" id="netBadge"><span class="ck">&#10003;</span><span id="netBadgeTxt">Connected</span></div>
+    <button class="icon-btn" id="settingsBtn" title="Settings, logs & history">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="var(--surface)"/><circle cx="15" cy="12" r="2" fill="var(--surface)"/><circle cx="8" cy="18" r="2" fill="var(--surface)"/></svg>
+    </button>
     <button class="icon-btn" id="gear" title="Connection settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
     </button>
   </div>
+</div>
+
+<div class="blip3d" id="blip3d" title="Live device">
+  <div class="blip3d-canvas" id="blip3dCanvas"></div>
+  <div class="blip3d-label" id="blip3dLabel">IDLE</div>
 </div>
 
 <div class="banner" id="banner">
@@ -313,6 +420,33 @@ body{
   <input id="addr" placeholder="dripstop.local  or  192.168.0.205">
   <button class="btn" id="connectBtn">Connect</button>
   <div class="hint" id="popHint"></div>
+</div>
+
+<div class="sheet" id="settingsSheet">
+  <div class="sheet-head">
+    <h3>Settings</h3>
+    <button class="icon-btn" id="settingsClose" title="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body">
+    <div class="set-sec">
+      <h4>Appearance</h4>
+      <div class="set-row">
+        <div><div class="lbl">Dark mode</div><div class="sub">Switch between dark and light themes</div></div>
+        <div class="switch" id="themeSwitch" role="switch" aria-label="Dark mode"></div>
+      </div>
+    </div>
+    <div class="set-sec">
+      <h4>Logs &amp; History</h4>
+      <div class="seg set-tabs" id="logTabs">
+        <button class="active" data-tab="events">Event Log</button>
+        <button data-tab="infusions">Infusions</button>
+      </div>
+      <div id="logEvents"></div>
+      <div id="logInfusions" style="display:none"></div>
+    </div>
+  </div>
 </div>
 
 <!-- detail drawer -->
@@ -389,6 +523,34 @@ const $ = id => document.getElementById(id);
 
 /* ── helpers ─────────────────────────────────────────── */
 const dpmToMlhr = (dpm, df) => df ? Math.round(dpm * 60 / df) : 0;
+
+// Live rate graph (inline SVG, no Chart.js per card). Fills its panel via
+// preserveAspectRatio="none"; taller viewBox + gridlines read as a real graph.
+function sparkSVG(series, color){
+  const W=600, H=240, padT=12, padB=16;
+  const data = (series||[]).slice(-60);
+  const grid = [0.25,0.5,0.75].map(f=>{
+    const y=(padT+(H-padT-padB)*f).toFixed(1);
+    return `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="var(--line-2)" stroke-width="1" opacity="0.5"/>`;
+  }).join("");
+  if(data.length < 2){
+    return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${grid}</svg>`;
+  }
+  const mn=Math.min(...data), mx=Math.max(...data), span=(mx-mn)||1;
+  const X=i=>(i/(data.length-1))*W;
+  const Y=v=>H-padB-((v-mn)/span)*(H-padT-padB);
+  const pts=data.map((v,i)=>X(i).toFixed(1)+","+Y(v).toFixed(1));
+  const line=pts.join(" ");
+  const area=`0,${H-padB} `+line+` ${W},${H-padB}`;
+  const lx=X(data.length-1).toFixed(1), ly=Y(data[data.length-1]).toFixed(1);
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    ${grid}
+    <polygon points="${area}" fill="${color}" opacity="0.14"></polygon>
+    <polyline points="${line}" fill="none" stroke="${color}" stroke-width="2.6"
+      stroke-linejoin="round" stroke-linecap="round"></polyline>
+    <circle cx="${lx}" cy="${ly}" r="4" fill="${color}"></circle>
+  </svg>`;
+}
 const fmtAge = ms => ms == null ? "—" : ms < 1000 ? "now" : ms < 60000 ? Math.round(ms/1000)+"s ago" : Math.round(ms/60000)+"m ago";
 const rssiPct = r => r == null ? 0 : Math.max(0, Math.min(100, Math.round((r + 100) / 70 * 100)));
 const clockOf = t => { const d = t ? new Date(t*1000) : new Date(); return d.toLocaleTimeString([], {hour12:false}); };
@@ -425,6 +587,25 @@ function upsert(p){
     d.events.unshift({ type:"status", msg:p.STATUS, t:Date.now()/1000 });
   if(p.ALARM && p.ALARM !== "NORMAL" && p.ALARM !== d._lastAlarm)
     d.events.unshift({ type:"alarm", msg:p.ALARM, t:Date.now()/1000 });
+
+  // ── global logs & infusion history (for the Settings drawer) ──
+  const devName = p.name || d.id || "device";
+  if(d._lastStatus && p.STATUS !== d._lastStatus)
+    pushLog({ type: p.STATUS==="COMPLETE"?"complete":"status", dev:devName,
+              msg:"Status → "+p.STATUS, t:Date.now() });
+  if(p.ALARM && p.ALARM !== "NORMAL" && p.ALARM !== d._lastAlarm)
+    pushLog({ type:"alarm", dev:devName, msg:p.ALARM+" alarm", t:Date.now() });
+
+  const active = (p.STATUS==="RUNNING"||p.STATUS==="CALIBRATING");
+  if(active && !d._session){
+    d._session = { dev:devName, start:Date.now(), startDrops:(+p.DROPS||0) };
+  } else if(!active && d._session){
+    const reason = p.ALARM && p.ALARM!=="NORMAL" && p.ALARM!=="COMPLETE" ? "alarm"
+                 : (p.STATUS==="COMPLETE" ? "complete" : "stop");
+    finishSession(d, p, reason);
+  }
+  if(p.STATUS==="ALARM" && d._session) d._session.alarm = p.ALARM;
+
   d._lastStatus = p.STATUS; d._lastAlarm = p.ALARM;
   if(d.events.length > 30) d.events.pop();
 
@@ -446,14 +627,19 @@ function renderAll(){
   empty.style.display="none";
 
   let active=0, alarms=0, q=[];
+  let anyConnected=false, anyRunning=false, anyAlarm=false;
   for(const d of devices.values()){
     const link = linkOf(d);
     const alarmOn = d.ALARM && d.ALARM!=="NORMAL";
     if(d.STATUS==="RUNNING" && link!=="OFFLINE") active++;
     if(alarmOn && link!=="OFFLINE") alarms++;
     if(link!=="OFFLINE") q.push(100 - (d.loss_pct||0));
+    if(link!=="OFFLINE") anyConnected=true;
+    if(link!=="OFFLINE" && (d.STATUS==="RUNNING"||d.STATUS==="CALIBRATING")) anyRunning=true;
+    if(link!=="OFFLINE" && alarmOn) anyAlarm=true;
     renderCard(d, link, alarmOn);
   }
+  setBlipState(anyAlarm ? "alarm" : anyRunning ? "running" : anyConnected ? "idle" : "offline");
   // prune removed cards
   for(const el of grid.querySelectorAll(".card")){
     if(!devices.has(el.dataset.id)) el.remove();
@@ -482,6 +668,21 @@ function renderCard(d, link, alarmOn){
   el.className = "card s-"+st + (alarmOn&&!off?" alarm":"") + (off?" offline":"");
   const ml = dpmToMlhr(d.RATE, d.DF);
   const setMl = dpmToMlhr(d.SET, d.DF);
+  // Threshold coloring: green in-range, amber drifting, red out/alarm, brand otherwise.
+  let rateColor = "var(--brand)";
+  if (alarmOn && !off) rateColor = "var(--crit)";
+  else if (!off && setMl > 0) {
+    const dev = Math.abs(ml - setMl) / setMl;
+    rateColor = dev <= 0.10 ? "var(--ok)" : dev <= 0.20 ? "var(--warn)" : "var(--crit)";
+  }
+  // Remaining time as h:mm when long, else minutes.
+  let timeStr = "∞", timeUnit = "";
+  if (!off && d.TIME !== "NA" && d.TIME != null) {
+    const mins = +d.TIME;
+    if (mins >= 60) { timeStr = Math.floor(mins/60)+":"+String(mins%60).padStart(2,"0"); timeUnit = "h"; }
+    else { timeStr = mins; timeUnit = "min"; }
+  }
+  const spark = off ? "" : sparkSVG(d.series ? d.series.rate : [], rateColor);
   const rp = rssiPct(d.rssi);
   const sigCls = rp>=66?"":rp>=33?"w":"c";
   const sigBars = [1,2,3,4].map(i=>`<i class="${rp >= i*25-12 ? "on":""}"></i>`).join("");
@@ -502,28 +703,36 @@ function renderCard(d, link, alarmOn){
       </div>
       <div class="badge ${badgeCls}"><span class="bd"></span>${badgeTxt}</div>
     </div>
-    <div class="readout">
-      <div class="ro rate">
-        <div class="top"><span class="big">${off?"––":ml}</span><span class="unit">mL/hr</span></div>
-        <div class="l">Live rate</div>
-        <div class="alt">${off?"—":d.RATE+" dpm"}</div>
+    <div class="card-body">
+      <div class="card-left">
+        <div class="readout">
+          <div class="ro rate">
+            <div class="top"><span class="big" style="color:${rateColor}">${off?"––":ml}</span><span class="unit">mL/hr</span></div>
+            <div class="l">Live rate</div>
+            <div class="alt">${off?"—":"≈ "+d.RATE+" dpm"}</div>
+          </div>
+          <div class="ro">
+            <div class="top"><span class="big" style="font-size:40px">${off?"––":timeStr}</span><span class="unit">${timeStr==="∞"?"":timeUnit}</span></div>
+            <div class="l">Time left</div>
+            <div class="alt">${off?"—":"set "+setMl+" mL/hr"}</div>
+          </div>
+        </div>
+        <div class="minirow">
+          <div class="mini"><div class="v">${off?"––":setMl}</div><div class="l">Set mL/hr</div></div>
+          <div class="mini"><div class="v">${off?"––":d.DF}</div><div class="l">Drop factor</div></div>
+          <div class="mini"><div class="v">${off?"––":(d.loss_pct??0)+"%"}</div><div class="l">Pkt loss</div></div>
+        </div>
+        <div class="c-foot">
+          <div class="fresh ${freshCls}"><span class="d"></span>${off?"no signal":fmtAge(age)}</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span>${off||d.rssi==null?"":d.rssi+" dBm"}</span>
+            <div class="sig ${off?"c":sigCls}">${off?'<i></i><i></i><i></i><i></i>':sigBars}</div>
+          </div>
+        </div>
       </div>
-      <div class="ro">
-        <div class="top"><span class="big" style="font-size:34px">${off?"––":(d.TIME==="NA"||d.TIME==null?"∞":d.TIME)}</span><span class="unit">${d.TIME==="NA"||d.TIME==null?"":"min"}</span></div>
-        <div class="l">Time left</div>
-        <div class="alt">${off?"—":"set "+setMl+" mL/hr"}</div>
-      </div>
-    </div>
-    <div class="minirow">
-      <div class="mini"><div class="v">${off?"––":setMl}</div><div class="l">Set mL/hr</div></div>
-      <div class="mini"><div class="v">${off?"––":d.DF}</div><div class="l">Drop factor</div></div>
-      <div class="mini"><div class="v">${off?"––":(d.loss_pct??0)+"%"}</div><div class="l">Pkt loss</div></div>
-    </div>
-    <div class="c-foot">
-      <div class="fresh ${freshCls}"><span class="d"></span>${off?"no signal":fmtAge(age)}</div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span>${off||d.rssi==null?"":d.rssi+" dBm"}</span>
-        <div class="sig ${off?"c":sigCls}">${off?'<i></i><i></i><i></i><i></i>':sigBars}</div>
+      <div class="card-graph">
+        <div class="spark-l">Live rate — mL/hr</div>
+        ${spark}
       </div>
     </div>`;
 }
@@ -532,7 +741,7 @@ function renderCard(d, link, alarmOn){
 let chart=null, chartType="rate", chartWin="1m";
 
 const palette = {
-  brand:"#1f74e0", brand2:"#4aa3ff", ok:"#10b981", warn:"#f59e0b", crit:"#ef4444", slate:"#94a3b8"
+  brand:"#2596be", brand2:"#4fb6d8", ok:"#27c08a", warn:"#f0b429", crit:"#f4574f", slate:"#6b8298"
 };
 function grad(ctx, hex){
   const g = ctx.createLinearGradient(0,0,0,230);
@@ -631,10 +840,33 @@ $("dClose").onclick=closeDetail; $("scrim").onclick=closeDetail;
 document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeDetail(); });
 
 /* ── connection indicator + banner ───────────────────── */
+let gatewayWifi = null;       // {connected, ssid, ip, rssi} from device /status
+let lastLiveTs = 0;
+
 function setConn(state){ // 'live' | 'stale' | 'off'
   const c=$("conn"); c.className="conn "+state;
   $("connTxt").textContent = state==="live"?"LIVE":state==="stale"?"STALE":"OFFLINE";
+  if(state==="live") lastLiveTs = Date.now();
+  if(state==="off"){ gatewayWifi=null; }
+  updateNetBadge();
 }
+
+// Green "same network" badge: only when LIVE mode + fresh device packets
+// (proves the browser can reach the device → same network) + device WiFi up.
+function updateNetBadge(){
+  const el=$("netBadge"); if(!el) return;
+  const fresh = (Date.now()-lastLiveTs) < 6000;
+  const deviceUp = !gatewayWifi || gatewayWifi.connected !== false;  // tolerate missing field
+  const ok = (mode==="live") && fresh && deviceUp;
+  if(ok){
+    const ssid = gatewayWifi && gatewayWifi.ssid;
+    $("netBadgeTxt").textContent = ssid ? ("Same network \u00b7 "+ssid) : "Device connected";
+    el.classList.add("show");
+  } else {
+    el.classList.remove("show");
+  }
+}
+setInterval(updateNetBadge, 2000);   // re-evaluate freshness even with no new packets
 function showBanner(msg){ $("bannerTxt").innerHTML=msg; $("banner").classList.add("show"); }
 function hideBanner(){ $("banner").classList.remove("show"); }
 
@@ -675,8 +907,9 @@ class LiveSource{
   }
   async fetchStatus(){
     try{ const r=await fetch(this.url("/status"),{cache:"no-store"}); const j=await r.json();
-      // merge rssi into device(s)
+      gatewayWifi = j.wifi || null;
       const id=j.device?.id; if(id&&devices.has(id)){ devices.get(id).rssi=j.wifi?.rssi; renderAll(); if(openDevice===id) refreshDetail(devices.get(id)); }
+      updateNetBadge();
     }catch(_){}
   }
   async fetchHistory(id, win){
@@ -786,11 +1019,160 @@ function startMock(){
 }
 
 $("liveBtn").onclick=()=>{ if(mode==="live")return; mode="live"; $("liveBtn").classList.add("active");$("liveBtn").classList.remove("mock"); $("mockBtn").classList.remove("active"); startLive(); };
-$("mockBtn").onclick=()=>{ if(mode==="mock")return; mode="mock"; $("mockBtn").classList.add("active","mock"); $("liveBtn").classList.remove("active"); startMock(); };
+$("mockBtn").onclick=()=>{ if(mode==="mock")return; mode="mock"; $("mockBtn").classList.add("active","mock"); $("liveBtn").classList.remove("active"); gatewayWifi=null; updateNetBadge(); startMock(); };
 
 $("gear").onclick=()=>$("pop").classList.toggle("show");
 $("connectBtn").onclick=()=>{ gatewayAddr=$("addr").value; $("pop").classList.remove("show"); if(mode==="live") startLive(); };
 document.addEventListener("click",e=>{ if(!$("pop").contains(e.target)&&e.target!==$("gear")&&!$("gear").contains(e.target)) $("pop").classList.remove("show"); });
+
+/* ── Settings drawer: theme, event log, infusion history ── */
+const eventLog = [];      // {type, dev, msg, t}
+const infusionLog = [];   // {dev, start, end, durationMs, volume, reason, alarm}
+const LOG_MAX = 200;
+
+function pushLog(entry){
+  eventLog.unshift(entry);
+  if(eventLog.length > LOG_MAX) eventLog.pop();
+  if($("settingsSheet").classList.contains("show")) renderLogs();
+}
+function finishSession(d, p, reason){
+  const s = d._session; if(!s) return;
+  const df = (+p.DF)||20;
+  const endDrops = (+p.DROPS||0);
+  const vol = df ? Math.max(0,(endDrops - (s.startDrops||0)))/df : 0;
+  infusionLog.unshift({
+    dev:s.dev, start:s.start, end:Date.now(),
+    durationMs: Date.now()-s.start,
+    volume: vol, reason: reason, alarm: s.alarm || (reason==="alarm"?(p.ALARM||"ALARM"):null)
+  });
+  if(infusionLog.length > LOG_MAX) infusionLog.pop();
+  d._session = null;
+  pushLog({ type:reason==="alarm"?"alarm":(reason==="complete"?"complete":"status"),
+            dev:s.dev, msg:"Infusion ended ("+reason+")", t:Date.now() });
+}
+
+const fmtClock = ms => new Date(ms).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"});
+const fmtDur = ms => { const s=Math.round(ms/1000); const m=Math.floor(s/60); return m>0?`${m}m ${s%60}s`:`${s}s`; };
+
+function renderLogs(){
+  const ev=$("logEvents"), inf=$("logInfusions");
+  if(eventLog.length===0){ ev.innerHTML='<div class="log-empty">No events yet — alarms and status changes will appear here.</div>'; }
+  else ev.innerHTML = eventLog.map(e=>`
+    <div class="logrow ${e.type}">
+      <div class="dot"></div>
+      <div><div class="msg">${e.msg}</div><div class="meta">${e.dev} · ${fmtClock(e.t)}</div></div>
+    </div>`).join("");
+  if(infusionLog.length===0){ inf.innerHTML='<div class="log-empty">No completed infusions yet.</div>'; }
+  else inf.innerHTML = infusionLog.map(s=>{
+    const rc = s.reason==="complete"?"ok":(s.reason==="alarm"?"alarm":"stop");
+    const rt = s.reason==="alarm"?(s.alarm||"ALARM"):s.reason.toUpperCase();
+    return `<div class="inf-card">
+      <div class="top"><b>${s.dev}</b><span class="rsn ${rc}">${rt}</span></div>
+      <div class="det">
+        <span>Vol <b>${s.volume.toFixed(1)} mL</b></span>
+        <span>Duration <b>${fmtDur(s.durationMs)}</b></span>
+        <span>${fmtClock(s.start)} → ${fmtClock(s.end)}</span>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// theme (persisted; degrades gracefully if storage is unavailable)
+function applyTheme(t){
+  document.documentElement.dataset.theme = (t==="light") ? "light" : "";
+  $("themeSwitch").classList.toggle("on", t!=="light");   // "on" = dark
+  try{ localStorage.setItem("dripstop-theme", t); }catch(e){}
+}
+(function initTheme(){
+  let t="dark"; try{ t = localStorage.getItem("dripstop-theme") || "dark"; }catch(e){}
+  applyTheme(t);
+})();
+$("themeSwitch").onclick=()=>{
+  const dark = document.documentElement.dataset.theme !== "light";
+  applyTheme(dark ? "light" : "dark");
+};
+
+// open/close drawer
+function openSettings(){ renderLogs(); $("settingsSheet").classList.add("show"); }
+$("settingsBtn").onclick=openSettings;
+$("settingsClose").onclick=()=>$("settingsSheet").classList.remove("show");
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") $("settingsSheet").classList.remove("show"); });
+
+// log tabs
+$("logTabs").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  [...$("logTabs").children].forEach(x=>x.classList.toggle("active",x===b));
+  const t=b.dataset.tab;
+  $("logEvents").style.display    = t==="events"    ? "" : "none";
+  $("logInfusions").style.display = t==="infusions" ? "" : "none";
+});
+
+/* ── 3D device blip (Three.js; rotates while running) ── */
+const Blip = (function(){
+  let renderer, scene, camera, model, raf, ready=false, failed=false;
+  let state="offline", spin=0;
+  const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  function init(){
+    if(failed||ready) return;
+    if(!window.THREE || !THREE.GLTFLoader){ failed=true; return; }   // CDN unavailable → no blip
+    const host=$("blip3dCanvas"); if(!host) return;
+    const W=host.clientWidth||128, H=host.clientHeight||128;
+    try{
+      renderer=new THREE.WebGLRenderer({alpha:true, antialias:true});
+    }catch(e){ failed=true; return; }                                // WebGL unsupported
+    renderer.setSize(W,H); renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+    host.appendChild(renderer.domElement);
+    scene=new THREE.Scene();
+    camera=new THREE.PerspectiveCamera(38, W/H, 0.1, 100);
+    camera.position.set(0,0,5.2);
+    scene.add(new THREE.AmbientLight(0xffffff,0.85));
+    const key=new THREE.DirectionalLight(0xffffff,0.9); key.position.set(3,4,5); scene.add(key);
+    const rim=new THREE.DirectionalLight(0x66ccff,0.5); rim.position.set(-4,-2,-3); scene.add(rim);
+
+    new THREE.GLTFLoader().load("model.glb", g=>{
+      model=g.scene;
+      // recenter + fit to view
+      const box=new THREE.Box3().setFromObject(model);
+      const c=box.getCenter(new THREE.Vector3()); model.position.sub(c);
+      const s=2.4/Math.max(...box.getSize(new THREE.Vector3()).toArray());
+      model.scale.setScalar(s);
+      model.rotation.x=-0.35;
+      scene.add(model); ready=true; loop();
+    }, undefined, err=>{ failed=true; console.warn("blip: model.glb not found",err); });
+  }
+
+  function applyTint(){
+    if(!model) return;
+    const hex = state==="alarm" ? cssVar("--crit") : state==="running" ? cssVar("--brand") : cssVar("--slate");
+    const col = new THREE.Color(hex||"#2596be");
+    model.traverse(o=>{ if(o.isMesh && o.material){
+      o.material.emissive = col; o.material.emissiveIntensity = state==="alarm"?0.45:0.18;
+      o.material.needsUpdate=true;
+    }});
+  }
+  function loop(){
+    raf=requestAnimationFrame(loop);
+    if(!model) return;
+    const speed = state==="running"?0.022 : state==="alarm"?0.05 : state==="idle"?0.004 : 0;
+    spin+=speed; model.rotation.y=spin;
+    renderer.render(scene,camera);
+  }
+  function setState(s){
+    state=s; if(failed) return; if(!ready){ init(); }
+    const el=$("blip3d"); if(!el) return;
+    el.classList.toggle("show", s!=="offline" ? true : true); // always visible once we have data
+    el.classList.toggle("running", s==="running");
+    el.classList.toggle("alarm", s==="alarm");
+    $("blip3dLabel").textContent = s.toUpperCase();
+    applyTint();
+  }
+  return { setState };
+})();
+function setBlipState(s){ Blip.setState(s); }
+// re-tint on theme change
+const _applyTheme = applyTheme;
+applyTheme = function(t){ _applyTheme(t); try{ setBlipState(document.querySelector(".blip3d.alarm")?"alarm":document.querySelector(".blip3d.running")?"running":"idle"); }catch(e){} };
 
 // hint about where we're served from
 (function(){
